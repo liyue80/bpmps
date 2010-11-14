@@ -7,3 +7,5 @@ Version #3 - check it in on br1
 
 
 Version #4 - check it in on master
+
+Mark: branch "br1" was deleted.
