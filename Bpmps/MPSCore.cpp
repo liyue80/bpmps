@@ -370,3 +370,106 @@ BOOL CMPSCore::QueryFinalResult_SaleVSForecast( CTime StartingDate, CString Full
 
 	return TRUE;
 }
+
+// 在数据库中建一个新的SKU组合名
+BOOL CMPSCore::CreateNewSkuCombination(const CString &CbName, CString *pErrStr)
+{
+	return AddSkuCodeToCombination(CbName, "", pErrStr);
+}
+
+// 获取SKU组合中所有SKUCODE
+BOOL CMPSCore::GetAllSkuCodesOfCombination( const CString &strName, CArray<CString> *pSkuCodes, CString *pErrStr )
+{
+	CString SqlStr;
+
+	ASSERT(strName.GetLength() != NULL);
+	ASSERT(pSkuCodes != NULL);
+
+	SqlStr.Format("SELECT DISTINCT `skucode` from `skucombine_s` where `cbname`='%s' and not `skucode`=''", (LPCTSTR)strName);
+	if (!this->SelectQuery(SqlStr))
+	{
+		if (pErrStr)
+			*pErrStr = this->OutErrors();
+		return FALSE;
+	}
+
+	pSkuCodes->RemoveAll();
+
+	MYSQL_ROW row = NULL;
+
+	while ( NULL != (row = this->GetRecord()))
+	{
+		pSkuCodes->Add(row[0]);
+	}
+
+	return TRUE;
+}
+
+// 添加一个SKUCODE到组合中
+BOOL CMPSCore::AddSkuCodeToCombination( const CString &CbName, const CString &SkuCode, CString *pErrStr )
+{
+	CString SqlStr;
+
+	ASSERT(CbName.GetLength() != 0);
+
+	if (CbName.GetLength() == 0)
+	{
+		if (pErrStr != NULL)
+			*pErrStr = "Invalid combination name";
+		return FALSE;
+	}
+
+#ifdef _DEBUG
+
+#endif
+
+	SqlStr.Format( "INSERT INTO skucombine_s values ('%s','%s')", (LPCTSTR) CbName, (LPCTSTR) SkuCode );
+	if (!this->NonSelectQuery(SqlStr))
+	{
+		if (pErrStr != NULL)
+			*pErrStr = this->OutErrors();
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+BOOL CMPSCore::RemoveSkuCodeFromCombination( const CString &CbName, const CString &SkuCode, CString *pErrStr )
+{
+	CString SqlStr;
+
+	SqlStr.Format("DELETE from `skucombine_s` where `cbname`='%s' and `skucode`='%s'", (LPCTSTR) CbName, (LPCTSTR)SkuCode);
+	if (!this->NonSelectQuery(SqlStr))
+	{
+		*pErrStr = this->OutErrors();
+		return FALSE;
+	}
+
+	if ( 0 == this->GetAffectedRow() )
+	{
+		*pErrStr = "Affected none record";
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+BOOL CMPSCore::DeleteSkuCombination( const CString &CbName, CString *pErrStr )
+{
+	CString SqlStr;
+
+	SqlStr.Format("DELETE from `skucombine_s` where `cbname`='%s'", (LPCTSTR) CbName);
+	if (!this->NonSelectQuery(SqlStr))
+	{
+		*pErrStr = this->OutErrors();
+		return FALSE;
+	}
+
+	if ( 0 == this->GetAffectedRow() )
+	{
+		*pErrStr = "Affected none record";
+		return FALSE;
+	}
+
+	return TRUE;
+}

@@ -55,6 +55,8 @@ public:
 		return mysql_error(&this->m_mysql);
 	};
 
+	my_ulonglong GetAffectedRow();
+
 protected:
 	BOOL FindAndSave(LPCTSTR str);
 

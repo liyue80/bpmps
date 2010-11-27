@@ -117,3 +117,8 @@ void CMyDatabase::FreeRecord()
 	this->m_field = NULL;
 	this->m_row = NULL;
 }
+
+my_ulonglong CMyDatabase::GetAffectedRow()
+{
+	return mysql_affected_rows(&this->m_mysql);
+}
