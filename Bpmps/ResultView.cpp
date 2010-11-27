@@ -104,7 +104,8 @@ BOOL CResultView::UpdateData(const CQueryFilter *pQueryFilter)
 	for (INT_PTR i = 0; i < FullIndexArray.GetSize(); i++)
 	{
 		BOOL bRet = pTheApp->m_MPSCore.QueryFinalResult(
-			pQueryFilter->StartingDate, FullIndexArray.GetAt(i), ResultLine);
+			pQueryFilter->StartingDate, pQueryFilter->FirstWeekSale,
+			FullIndexArray.GetAt(i), ResultLine);
 		
 		if (!bRet)
 		{

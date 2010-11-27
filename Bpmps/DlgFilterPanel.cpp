@@ -25,12 +25,14 @@ void CDlgFilterPanel::DoDataExchange(CDataExchange* pDX)
 	CDialog::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_DATETIMEPICKER1, m_CtrlDataTime);
 	DDX_Control(pDX, IDC_SKU_GROUP_PICKER, m_cbSkuGroupPicker);
+	DDX_Control(pDX, IDC_DATETIMEPICKER2, m_CtrlDateTime2);
 }
 
 
 BEGIN_MESSAGE_MAP(CDlgFilterPanel, CDialog)
 	ON_BN_CLICKED(ID_START_QUERY, &CDlgFilterPanel::OnBnClickedStartQuery)
 	ON_BN_CLICKED(IDC_IMPOER_GROUP, &CDlgFilterPanel::OnBnClickedImportGroup)
+	ON_BN_CLICKED(IDC_BUTTON2, &CDlgFilterPanel::OnBnClickedButton2)
 END_MESSAGE_MAP()
 
 
@@ -38,11 +40,16 @@ END_MESSAGE_MAP()
 
 void CDlgFilterPanel::OnBnClickedStartQuery()
 {
+	// Get CTime from 1st DataTime Control on the dialog
 	CTime SelTime;
 	this->m_CtrlDataTime.GetTime(SelTime);
 
-	// check user select date, must be Monday.
-	if (SelTime.GetDayOfWeek() != 2)
+	// Get CTime from 2nd DataTime Control on the dialog
+	CTime SaleWk1;
+	this->m_CtrlDateTime2.GetTime(SaleWk1);
+
+	// Check user select date, must be Monday
+	if ( (SelTime.GetDayOfWeek() != 2) || (SaleWk1.GetDayOfWeek() != 2) )
 	{
 		::MessageBox(NULL,
 			"Sorry, you selected date is not Monday.\nPlease try again.",
@@ -52,6 +59,7 @@ void CDlgFilterPanel::OnBnClickedStartQuery()
 
 	CQueryFilter *pFilter = new CQueryFilter;
 	pFilter->StartingDate = SelTime;
+	pFilter->FirstWeekSale = SaleWk1;
 	pFilter->SkuGroup = _T("<ALL>");
 
 	// wParam - Reserved
@@ -139,4 +147,50 @@ void CDlgFilterPanel::OnBnClickedImportGroup()
 	CString DispMsg;
 	DispMsg.Format("Import %d records", InsertCount);
 	AfxGetApp()->GetMainWnd()->MessageBox(DispMsg);
+}
+
+void CDlgFilterPanel::OnBnClickedButton2()
+{
+	CArray<double> volumes;
+	CString ErrStr;
+	CBpmpsApp * pTheApp = (CBpmpsApp *) AfxGetApp();
+	CTime SelTime4Sale(2009, 3, 30, 0, 0, 0);
+
+	BOOL ret = pTheApp->m_MPSCore.GetSalesVolumeOfWeeks(SelTime4Sale,
+		"M_DL-MD_INDEX2117", volumes, &ErrStr);
+
+	if (!ret)
+	{
+		AfxMessageBox(ErrStr);
+		return;
+	}
+
+#if 0
+	CArray<double> AdjustedVolumes;
+	pTheApp->m_MPSCore.AdjustWeekSaleStd(volumes, 2, AdjustedVolumes);
+
+	unsigned WeeksNumAfterFirstSale
+		= pTheApp->m_MPSCore.GetWeeksAfterFirstSale(volumes);
+
+	if (WeeksNumAfterFirstSale < 25 && WeeksNumAfterFirstSale != 0)
+	{
+		double SumHalf = 0;
+
+		for (int i=27; i<52; i++)
+			SumHalf += AdjustedVolumes.GetAt(i);
+
+		(SumHalf/(52-27) + pTheApp->m_MPSCore.SumOf(AdjustedVolumes) / WeeksNumAfterFirstSale) / 2;
+	}
+	else if (WeeksNumAfterFirstSale == 0)
+	{
+		0;
+	}
+	else
+	{
+		pTheApp->m_MPSCore.SumOf(AdjustedVolumes) / WeeksNumAfterFirstSale;
+	}
+#endif
+
+	double a = pTheApp->m_MPSCore.GetAdjustedAveWeeklySaleVol(volumes);
+	pTheApp = NULL;
 }

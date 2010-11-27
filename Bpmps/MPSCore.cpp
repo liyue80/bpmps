@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "MPSCore.h"
+#include "math.h"
 
 CMPSCore::CMPSCore(void) : CMyDatabase()
 {
@@ -43,26 +44,41 @@ BOOL CMPSCore::GetResultHeader(CArray<CString> & HeaderNames)
 	return TRUE;
 }
 
-BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CString FullIndex, CArray<CString> &ResultArray )
+BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CTime Wk1, CString FullIndex, CArray<CString> &ResultArray )
 {
 	CString ResultStr;
 
 	ResultArray.RemoveAll();
 
+	m_ROP = this->GetROP(FullIndex);
+	m_ROQ = this->GetROQ(FullIndex);
+	m_SafeStock = this->GetSafeStock(FullIndex);
+
 	if (!QueryFinalResult_OpenInv(StartingDate, FullIndex, ResultStr))
 		return FALSE;
 	ResultArray.Add(ResultStr);
+	double OpenInv = atof(ResultStr);
 
 	if (!QueryFinalResult_OutstandingPO(StartingDate, FullIndex, ResultStr))
 		return FALSE;
 	ResultArray.Add(ResultStr);
+	double OutstandingPO = atof(ResultStr);
 
 	if (!QueryFinalResult_LTForecast(StartingDate, FullIndex, ResultStr))
 		return FALSE;
 	ResultArray.Add(ResultStr);
+	double LTForecast = atof(ResultStr);
 
 	if (!QueryFinalResult_SaleVSForecast(StartingDate, FullIndex, ResultStr))
 		return FALSE;
+	ResultArray.Add(ResultStr);
+
+	CTime SelTime4Sale(2009, 3, 30, 0, 0, 0); //TODO: 从界面上取得日期
+	if (!QueryFinalResult_RecommendedOrderVolume(
+		SelTime4Sale, FullIndex, OpenInv, OutstandingPO, LTForecast, ResultStr))
+	{
+		return FALSE;
+	}
 	ResultArray.Add(ResultStr);
 
 	return TRUE;
@@ -171,7 +187,7 @@ BOOL CMPSCore::QueryFinalResult_OutstandingPO( CTime StartingDate, CString FullI
 		this->SelectQuery(SqlStr);
 
 		MYSQL_ROW Row = this->GetRecord();
-		if (!Row)
+		if (!Row || !Row[0])
 		{
 			this->FreeRecord();
 			return FALSE;
@@ -246,10 +262,6 @@ BOOL CMPSCore::QueryFinalResult_LTForecast( CTime StartingDate, CString FullInde
 		if (!MonthlyForecastMap.Lookup(Month, DailyForecast))
 		{
 			CString SqlStr;
-			//CString Wh, Loc;
-
-			//AfxExtractSubString(Wh, FullIndex, 1, '_');
-			//AfxExtractSubString(Loc, Wh, 0, '-');
 
 			SqlStr.Format("SELECT forecastvolume FROM monthlyforecast_o"
 				" where fullindex like '%%%s%%' and forecastmonth='%s'",
@@ -282,6 +294,7 @@ BOOL CMPSCore::QueryFinalResult_LTForecast( CTime StartingDate, CString FullInde
 	return TRUE;
 }
 
+// 计算一个月份中的工作日数量
 int CMPSCore::GetWorkdayPerMonth( int year, int month )
 {
 	int days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -368,6 +381,34 @@ BOOL CMPSCore::QueryFinalResult_SaleVSForecast( CTime StartingDate, CString Full
 	else
 		ResultStr = "Ok";
 
+	return TRUE;
+}
+
+BOOL CMPSCore::QueryFinalResult_RecommendedOrderVolume(
+	CTime Wk1ForSale, CString FullIndex,
+	double OpenInv, double OutstandingPO, double LTForecast,
+	CString &ResultStr
+	)
+{
+	CArray<double> SaleVolume;
+	CString ErrStr;
+
+	if (this->GetSalesVolumeOfWeeks(Wk1ForSale,
+		FullIndex, SaleVolume, &ErrStr) == FALSE)
+	{
+		return FALSE;
+	}
+
+	double AdjustedAveWeeklySale = GetAdjustedAveWeeklySaleVol(SaleVolume);
+	double RecommendedOrderVolume = 0;
+
+	if ((OpenInv+OutstandingPO-max(0,LTForecast-m_LeadTime*AdjustedAveWeeklySale)) < m_ROP)
+	{
+		RecommendedOrderVolume = max(m_ROQ,m_ROQ + m_SafeStock +
+			max(LTForecast,m_LeadTime*AdjustedAveWeeklySale) - OpenInv - OutstandingPO);
+	}
+
+	ResultStr.Format("%0.3f", RecommendedOrderVolume);
 	return TRUE;
 }
 
@@ -473,3 +514,248 @@ BOOL CMPSCore::DeleteSkuCombination( const CString &CbName, CString *pErrStr )
 
 	return TRUE;
 }
+
+// 计算53个星期每周的销售量
+BOOL CMPSCore::GetSalesVolumeOfWeeks(CTime StartDate4Sales, CString FullIndex,
+	CArray<double> &WeeksSaleVolume, CString *pErrStr
+	)
+{
+	CString SqlStr;
+	CTime TimeWeekend;
+	MYSQL_ROW row = NULL;
+	ASSERT(StartDate4Sales.GetDayOfWeek() == 2);
+
+	for ( int i = 0; i < 53; i++)
+	{
+		TimeWeekend = StartDate4Sales + CTimeSpan(7, 0, 0, 0);
+		SqlStr.Format("SELECT sum(`jdefgsalesvolume`) FROM `fgsales_o` "
+			"WHERE `fullindex` like '%%%s%%' AND `jdefgsalesdate`>='%s' AND `jdefgsalesdate`<'%s'",
+			(LPCTSTR) FullIndex,
+			(LPCTSTR) this->ConvertDateToString(StartDate4Sales),
+			(LPCTSTR) this->ConvertDateToString(TimeWeekend)
+			);
+
+		if ( !this->SelectQuery(SqlStr))
+		{
+			if (pErrStr)
+				*pErrStr = this->OutErrors();
+			return FALSE;
+		}
+
+		row = this->GetRecord();
+		if (row != NULL && row[0] != NULL)
+			WeeksSaleVolume.Add(atof((LPCTSTR)row[0]));
+		else
+			WeeksSaleVolume.Add(0.0);
+
+		this->FreeRecord();
+
+		// 累加日期，准备下一个for循环
+		StartDate4Sales = TimeWeekend;
+	}
+
+	return TRUE;
+}
+
+// 计算第一个有销售记录的星期后的周数
+// 输入参数，GetSalesVolumeOfWeeks的返回值
+// 返回值：0~53
+unsigned CMPSCore::GetWeeksAfterFirstSale(
+	const CArray<double> &WeekSales // Result of GetSalesVolumeOfWeeks()
+	)
+{
+	unsigned i = 0;
+
+	ASSERT(WeekSales.GetCount() == 53);
+
+	if (WeekSales.GetCount() != 53)
+		return 0;
+
+	for (i = 0; i < 52; i++)
+	{
+		if (WeekSales.GetAt(i) != 0)
+			break;
+	}
+
+	return 53 - i;
+}
+
+// 对数组中的值求和
+double CMPSCore::SumOf(const CArray<double> &Array)
+{
+	double sum = 0;
+
+	for ( int i = 0; i < Array.GetSize(); i++)
+	{
+		sum += Array.GetAt(i);
+	}
+
+	return sum;
+}
+
+// 把日期转换成字符串，形如 2010-1-31
+CString CMPSCore::ConvertDateToString(const CTime &Date)
+{
+	CString String;
+	String.Format("%u-%u-%u", Date.GetYear(), Date.GetMonth(), Date.GetDay());
+	return String;
+}
+
+double CMPSCore::StdDev(const CArray<double> &Array)
+{
+	CArray<double> PowOfArray;
+	int count = Array.GetCount();
+
+	for (int i = 0; i < count; i++)
+	{
+		double a = Array.GetAt(i);
+		PowOfArray.Add(a * a);
+	}
+
+	double sum = this->SumOf(Array);
+	double pow_sum = this->SumOf(PowOfArray);
+	//count -= 1;
+	return sqrt((pow_sum*count - sum*sum) / count / (count-1));
+	//double s_dev = sqrt(((pow(sum,2.0))-((1.0/count)*(pow(sum,2.0))))/(count-1.0));
+	//return s_dev;
+}
+
+// 调整周销售量，使其符合正态分布
+// 如果数组中全部是零时？？？
+BOOL CMPSCore::AdjustWeekSaleStd(
+	const CArray<double> &SaleVolume, unsigned filter,
+	CArray<double> &SaleVolumeAfterAdjust)
+{
+	CArray<double> TempArray;
+	TempArray.Append(SaleVolume);
+
+	// 去掉数组前面的为零的数据
+	// 注解：建议调整时去掉这段代码
+	while ( TempArray.GetCount() > 0 && TempArray.GetAt(0) == 0 )
+		TempArray.RemoveAt(0);
+
+	double stddev = this->StdDev(TempArray);
+	double u = this->SumOf(TempArray) / TempArray.GetCount();
+
+	// 挨个检查数据，存到输出队列中
+	int count = SaleVolume.GetCount();
+	for (int i = 0; i < count; i++)
+	{
+		double value = SaleVolume.GetAt(i);
+		if (value < 0)
+			continue;
+		if ( value >= u + stddev * filter )
+			value = u;
+		SaleVolumeAfterAdjust.Add(value);
+	}
+
+	return TRUE;
+}
+
+double CMPSCore::GetAdjustedAveWeeklySaleVol(const CArray<double> &SaleVolume)
+{
+	unsigned WeeksNumAfterFirstSale	= this->GetWeeksAfterFirstSale(SaleVolume);
+
+	if (WeeksNumAfterFirstSale == 0)
+		return 0;
+
+	CArray<double> AdjustedVolumes;
+	this->AdjustWeekSaleStd(SaleVolume, 2, AdjustedVolumes);
+
+	this->DumpTwoArray(SaleVolume, AdjustedVolumes);
+	double AveWeeklySale = this->SumOf(AdjustedVolumes) / WeeksNumAfterFirstSale;
+
+	if (WeeksNumAfterFirstSale >= 25)
+	{
+		double SumHalf = 0;
+		for (int i=27; i<52; i++)
+			SumHalf += AdjustedVolumes.GetAt(i);
+		SumHalf = SumHalf / 26;
+
+		AveWeeklySale += SumHalf;
+		AveWeeklySale /= 2;
+	}
+
+	return AveWeeklySale;
+}
+
+void CMPSCore::DumpTwoArray(const CArray<double> &ary1, const CArray<double> &ary2)
+{
+	CStdioFile file;
+	CString str;
+	
+	if (file.Open("week.txt", CFile::modeCreate|CFile::modeWrite))
+	{
+		for (int i=0; i < ary1.GetCount(); i++)
+		{
+			str.Format("%f\t\t%f\n", ary1.GetAt(i), ary2.GetAt(i));
+			file.WriteString(str);
+		}
+
+		file.Close();
+	}
+}
+
+double CMPSCore::GetROP(const CString &FullIndex)
+{
+	CString SqlStr;
+	SqlStr.Format("SELECT `rop` FROM `modelengine_o` where `fullindex`='%s'", FullIndex);
+
+	this->SelectQuery(SqlStr);
+
+	MYSQL_ROW Row = this->GetRecord();
+
+	if (!Row || !Row[0])
+	{
+		this->FreeRecord();
+		return FALSE;
+	}
+
+	double ROP = atoi(Row[0]);
+	this->FreeRecord();
+
+	return ROP;
+}
+
+double CMPSCore::GetROQ(const CString &FullIndex)
+{
+	CString SqlStr;
+	SqlStr.Format("SELECT `roq` FROM `modelengine_o` where `fullindex`='%s'", FullIndex);
+
+	this->SelectQuery(SqlStr);
+
+	MYSQL_ROW Row = this->GetRecord();
+
+	if (!Row || !Row[0])
+	{
+		this->FreeRecord();
+		return FALSE;
+	}
+
+	double ROQ = atoi(Row[0]);
+	this->FreeRecord();
+
+	return ROQ;
+}
+
+double CMPSCore::GetSafeStock(const CString &FullIndex)
+{
+	CString SqlStr;
+	SqlStr.Format("SELECT `safestock` FROM `modelengine_o` where `fullindex`='%s'", FullIndex);
+
+	this->SelectQuery(SqlStr);
+
+	MYSQL_ROW Row = this->GetRecord();
+
+	if (!Row || !Row[0])
+	{
+		this->FreeRecord();
+		return FALSE;
+	}
+
+	double SS = atoi(Row[0]);
+	this->FreeRecord();
+
+	return SS;
+}
+

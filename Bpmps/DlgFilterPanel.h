@@ -33,4 +33,7 @@ protected:
 	BOOL InitSkuGroupPicker(void); // Add SKU Groups' name into ComboBox
 public:
 	afx_msg void OnBnClickedImportGroup();
+	// The starting date of wk1 for sales
+	CDateTimeCtrl m_CtrlDateTime2;
+	afx_msg void OnBnClickedButton2();
 };

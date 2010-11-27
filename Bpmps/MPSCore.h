@@ -2,15 +2,12 @@
 
 #include "MyDatabase.h"
 
-#define QUERY_CLASS_INVALID 0x0000
-#define QUERY_CLASS_MPS     0x0001
-#define QUERY_CLASS_TEST	0x1000
-
 class CQueryFilter
 {
 public:
 	CString SkuGroup;
 	CTime   StartingDate;
+	CTime   FirstWeekSale;
 };
 
 ////////////////////////////////////////////////////////
@@ -39,34 +36,94 @@ public:
 	};
 
 	// 根据用户选择的条件，查询所有物品的7项预测结果
-	BOOL QueryFinalResult(CTime StartingDate, CString FullIndex, CArray<CString> &ResultArray);
+	BOOL QueryFinalResult(
+		CTime StartingDate, CTime Wk1, CString FullIndex, CArray<CString> &ResultArray
+		);
 
 public:
 	// 在数据库中建一个新的SKU组合名
-	BOOL CreateNewSkuCombination(const CString &CbName, CString *pErrStr);
+	BOOL CreateNewSkuCombination(
+		const CString &CbName, CString *pErrStr
+		);
 
 	// 从数据库中删除一个SKU组合
 	BOOL DeleteSkuCombination(const CString &CbName, CString *pErrStr);
 
 	// 获取SKU组合中所有SKUCODE
-	BOOL GetAllSkuCodesOfCombination(const CString &strName, CArray<CString> *pSkuCodes, CString *pErrStr);
+	BOOL GetAllSkuCodesOfCombination(
+		const CString &strName, CArray<CString> *pSkuCodes, CString *pErrStr
+		);
 
 	// 添加一个SKUCODE到组合中
-	BOOL AddSkuCodeToCombination(const CString &CbName, const CString &SkuCode, CString *pErrStr);
+	BOOL AddSkuCodeToCombination(
+		const CString &CbName, const CString &SkuCode, CString *pErrStr
+		);
 
 	// 从组合中删除一个SKUCODE
-	BOOL RemoveSkuCodeFromCombination(const CString &CbName, const CString &SkuCode, CString *pErrStr);
+	BOOL RemoveSkuCodeFromCombination(
+		const CString &CbName, const CString &SkuCode, CString *pErrStr
+		);
 
 protected:
-	BOOL QueryFinalResult_OpenInv(CTime StartingDate, CString FullIndex, CString &ResultStr);
+	BOOL QueryFinalResult_OpenInv(
+		CTime StartingDate, CString FullIndex, CString &ResultStr
+		);
 
-	BOOL QueryFinalResult_OutstandingPO(CTime StartingDate, CString FullIndex, CString &ResultStr);
+	BOOL QueryFinalResult_OutstandingPO(
+		CTime StartingDate, CString FullIndex, CString &ResultStr
+		);
 
-	BOOL QueryFinalResult_LTForecast( CTime StartingDate, CString FullIndex, CString &ResultStr );
+	BOOL QueryFinalResult_LTForecast(
+		CTime StartingDate, CString FullIndex, CString &ResultStr
+		);
 
-	BOOL QueryFinalResult_SaleVSForecast( CTime StartingDate, CString FullIndex, CString &ResultStr );
+	BOOL QueryFinalResult_SaleVSForecast(
+		CTime StartingDate, CString FullIndex, CString &ResultStr
+		);
 
-	int  GetWorkdayPerMonth( int year, int month );
+	BOOL QueryFinalResult_RecommendedOrderVolume(
+		CTime Wk1ForSale, CString FullIndex,
+		double OpenInv, double OutstandingPO, double LTForecast,
+		CString &ResultStr
+		);
+
+	// 计算一个月份中的工作日数量
+	int  GetWorkdayPerMonth(int year, int month);
+
+public: // TODO: change to protected functions
+	// 计算53个星期每周的销售量
+	BOOL GetSalesVolumeOfWeeks(CTime StartDate4Sales, CString FullIndex,
+		CArray<double> &WeeksSaleVolume, CString *pErrStr
+		);
+
+	// 计算第一个有销售记录的星期后的周数
+	unsigned CMPSCore::GetWeeksAfterFirstSale(
+		const CArray<double> &WeekSales // Result of GetSalesVolumeOfWeeks()
+		);
+
+	// 把日期转换成字符串，形如 2010-1-31
+	CString ConvertDateToString(const CTime &Date);
+
+	// 对数组中的值求和
+	double SumOf(const CArray<double> &Array);
+
+	double StdDev(const CArray<double> &Array);
+
+	// 调整周销售量，使其符合正态分布
+	BOOL CMPSCore::AdjustWeekSaleStd(
+		const CArray<double> &SaleVolume, unsigned filter,
+		CArray<double> &SaleVolumeAfterAdjust);
+
+	// 04_1 ModelEngine: $GS
+	double GetAdjustedAveWeeklySaleVol(const CArray<double> &SaleVolume);
+
+	void DumpTwoArray(const CArray<double> &ary1, const CArray<double> &ary2);
+
+	double GetROP(const CString &FullIndex);
+
+	double GetROQ(const CString &FullIndex);
+
+	double GetSafeStock(const CString &FullIndex);
 
 private:
 
@@ -78,4 +135,7 @@ private:
 	CString m_ConditionWh;
 	CString m_ConditionSku;
 	int     m_LeadTime;  // in weeks
+	double  m_ROP;
+	double  m_ROQ;
+	double  m_SafeStock;
 };

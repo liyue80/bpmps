@@ -74,6 +74,14 @@ int CChildView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	this->m_pResultView->GetListCtrl().InsertColumn(2, "Outstanding PO/GIT", 0, 140);
 	this->m_pResultView->GetListCtrl().InsertColumn(3, "LT Forecast", 0, 80);
 	this->m_pResultView->GetListCtrl().InsertColumn(4, "Rolling FC vs Sales (3 Months)", 0, 120);
+	this->m_pResultView->GetListCtrl().InsertColumn(5, "Recommend Order Volume", 0, 140);
+	this->m_pResultView->GetListCtrl().InsertColumn(6, "Action Flag", 0, 140);
+	this->m_pResultView->GetListCtrl().InsertColumn(7, "Last Week Order", 0, 140);
+	this->m_pResultView->GetListCtrl().InsertColumn(8, "Recommend Without Last Week Order", 0, 140);
+	this->m_pResultView->GetListCtrl().InsertColumn(9, "Production Tag", 0, 140);
+	this->m_pResultView->GetListCtrl().InsertColumn(10, "Arrival", 0, 140);
+	this->m_pResultView->GetListCtrl().InsertColumn(11, "Sales", 0, 140);
+
 	//LONG dwStyle = GetWindowLong(this->m_pResultView->GetListCtrl().GetSafeHwnd(), GWL_STYLE);
 	//dwStyle |= LVS_REPORT;
 	//SetWindowLong(this->m_pResultView->GetListCtrl().GetSafeHwnd(), GWL_STYLE, dwStyle);
