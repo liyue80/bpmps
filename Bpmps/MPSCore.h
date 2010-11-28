@@ -87,6 +87,12 @@ protected:
 		CString &ResultStr
 		);
 
+	BOOL QueryFinalResult_ActionFlag(
+		const CString &SaleVSForecast,
+		const CString &RecommendedOrderVolume,
+		CString &ResultStr
+		);
+
 	// 计算一个月份中的工作日数量
 	int  GetWorkdayPerMonth(int year, int month);
 
@@ -116,8 +122,6 @@ public: // TODO: change to protected functions
 
 	// 04_1 ModelEngine: $GS
 	double GetAdjustedAveWeeklySaleVol(const CArray<double> &SaleVolume);
-
-	void DumpTwoArray(const CArray<double> &ary1, const CArray<double> &ary2);
 
 	double GetROP(const CString &FullIndex);
 

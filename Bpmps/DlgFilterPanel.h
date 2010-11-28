@@ -36,4 +36,5 @@ public:
 	// The starting date of wk1 for sales
 	CDateTimeCtrl m_CtrlDateTime2;
 	afx_msg void OnBnClickedButton2();
+	virtual BOOL OnInitDialog();
 };

@@ -194,3 +194,18 @@ void CDlgFilterPanel::OnBnClickedButton2()
 	double a = pTheApp->m_MPSCore.GetAdjustedAveWeeklySaleVol(volumes);
 	pTheApp = NULL;
 }
+
+
+BOOL CDlgFilterPanel::OnInitDialog()
+{
+	CDialog::OnInitDialog();
+
+	// TODO:  便于调试，初始化DateTimePicker为特殊的日期
+	CTime t1(2010, 7, 19, 0, 0, 0);
+	CTime t2(2009, 3, 30, 0, 0, 0);
+	this->m_CtrlDataTime.SetTime(&t1);
+	this->m_CtrlDateTime2.SetTime(&t2);
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+	// 异常: OCX 属性页应返回 FALSE
+}

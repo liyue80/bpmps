@@ -72,10 +72,18 @@ BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CTime Wk1, CString FullInde
 	if (!QueryFinalResult_SaleVSForecast(StartingDate, FullIndex, ResultStr))
 		return FALSE;
 	ResultArray.Add(ResultStr);
+	CString SaleVSForecast = ResultStr;
 
 	CTime SelTime4Sale(2009, 3, 30, 0, 0, 0); //TODO: 从界面上取得日期
 	if (!QueryFinalResult_RecommendedOrderVolume(
 		SelTime4Sale, FullIndex, OpenInv, OutstandingPO, LTForecast, ResultStr))
+	{
+		return FALSE;
+	}
+	ResultArray.Add(ResultStr);
+	CString RecommendedOrderVolume = ResultStr;
+
+	if (!QueryFinalResult_ActionFlag(SaleVSForecast, RecommendedOrderVolume, ResultStr))
 	{
 		return FALSE;
 	}
@@ -642,8 +650,8 @@ BOOL CMPSCore::AdjustWeekSaleStd(
 	for (int i = 0; i < count; i++)
 	{
 		double value = SaleVolume.GetAt(i);
-		if (value < 0)
-			continue;
+		//if (value < 0)
+		//	continue;
 		if ( value >= u + stddev * filter )
 			value = u;
 		SaleVolumeAfterAdjust.Add(value);
@@ -662,7 +670,6 @@ double CMPSCore::GetAdjustedAveWeeklySaleVol(const CArray<double> &SaleVolume)
 	CArray<double> AdjustedVolumes;
 	this->AdjustWeekSaleStd(SaleVolume, 2, AdjustedVolumes);
 
-	this->DumpTwoArray(SaleVolume, AdjustedVolumes);
 	double AveWeeklySale = this->SumOf(AdjustedVolumes) / WeeksNumAfterFirstSale;
 
 	if (WeeksNumAfterFirstSale >= 25)
@@ -677,23 +684,6 @@ double CMPSCore::GetAdjustedAveWeeklySaleVol(const CArray<double> &SaleVolume)
 	}
 
 	return AveWeeklySale;
-}
-
-void CMPSCore::DumpTwoArray(const CArray<double> &ary1, const CArray<double> &ary2)
-{
-	CStdioFile file;
-	CString str;
-	
-	if (file.Open("week.txt", CFile::modeCreate|CFile::modeWrite))
-	{
-		for (int i=0; i < ary1.GetCount(); i++)
-		{
-			str.Format("%f\t\t%f\n", ary1.GetAt(i), ary2.GetAt(i));
-			file.WriteString(str);
-		}
-
-		file.Close();
-	}
 }
 
 double CMPSCore::GetROP(const CString &FullIndex)
@@ -759,3 +749,24 @@ double CMPSCore::GetSafeStock(const CString &FullIndex)
 	return SS;
 }
 
+BOOL CMPSCore::QueryFinalResult_ActionFlag(
+	const CString &SaleVSForecast,
+	const CString &RecommendedOrderVolume,
+	CString &ResultStr
+	)
+{
+	double volume = atof(RecommendedOrderVolume);
+	ASSERT ( volume >= 0 );
+
+	if (volume < 0)
+		return FALSE;
+
+	if ((SaleVSForecast.CompareNoCase("Undersell") == 0) && (volume > 0))
+		ResultStr = "Review FC Down";
+	else if ((SaleVSForecast.CompareNoCase("Oversell") == 0) && (volume == 0))
+		ResultStr = "Review FC Upwards";
+	else
+		ResultStr = "-";
+
+	return TRUE;
+}
