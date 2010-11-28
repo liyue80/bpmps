@@ -93,6 +93,28 @@ protected:
 		CString &ResultStr
 		);
 
+	BOOL QueryFinalResult_LastWeekOrder(
+		CTime StartingDate, CString FullIndex, CString &ResultStr
+		);
+
+	BOOL QueryFinalResult_RecommendedWithoutLastWeekOrder(
+		double OpenInv,
+		double OutstandingPO,
+		double LastWeekOrder,
+		double LTForecast,
+		CString &ResultStr
+		);
+
+	BOOL QueryFinalResult_ProductionTag(
+		double LastWeekOrder,
+		double RecommendWithoutLastWeekOrder,
+		CString &ResultStr
+		);
+
+	BOOL QueryFinalResult_Arrival(
+		CString &ResultStr
+		);
+
 	// 计算一个月份中的工作日数量
 	int  GetWorkdayPerMonth(int year, int month);
 
@@ -103,7 +125,7 @@ public: // TODO: change to protected functions
 		);
 
 	// 计算第一个有销售记录的星期后的周数
-	unsigned CMPSCore::GetWeeksAfterFirstSale(
+	unsigned GetWeeksAfterFirstSale(
 		const CArray<double> &WeekSales // Result of GetSalesVolumeOfWeeks()
 		);
 
@@ -116,7 +138,7 @@ public: // TODO: change to protected functions
 	double StdDev(const CArray<double> &Array);
 
 	// 调整周销售量，使其符合正态分布
-	BOOL CMPSCore::AdjustWeekSaleStd(
+	BOOL AdjustWeekSaleStd(
 		const CArray<double> &SaleVolume, unsigned filter,
 		CArray<double> &SaleVolumeAfterAdjust);
 
@@ -138,6 +160,8 @@ private:
 	// 用于QueryFinalResult，保存中间变量，避免重复计算
 	CString m_ConditionWh;
 	CString m_ConditionSku;
+	double  m_arrival;
+	double  m_AdjustedAveWeeklySale;
 	int     m_LeadTime;  // in weeks
 	double  m_ROP;
 	double  m_ROQ;

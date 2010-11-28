@@ -103,18 +103,19 @@ BOOL CResultView::UpdateData(const CQueryFilter *pQueryFilter)
 
 	for (INT_PTR i = 0; i < FullIndexArray.GetSize(); i++)
 	{
+		int index = this->GetListCtrl().InsertItem((int)i, FullIndexArray.GetAt(i));
+
 		BOOL bRet = pTheApp->m_MPSCore.QueryFinalResult(
 			pQueryFilter->StartingDate, pQueryFilter->FirstWeekSale,
 			FullIndexArray.GetAt(i), ResultLine);
 		
 		if (!bRet)
 		{
-			pTheApp->GetMainWnd()->MessageBox("Unexpected error",
-				"Error", MB_OK | MB_ICONERROR);
-			break;
+			//pTheApp->GetMainWnd()->MessageBox("Unexpected error",
+			//	"Error", MB_OK | MB_ICONERROR);
+			continue;
 		}
 
-		int index = this->GetListCtrl().InsertItem((int)i, FullIndexArray.GetAt(i));
 		if (index != -1)
 		{
 			for (INT_PTR j = 0; j < ResultLine.GetSize(); j++)

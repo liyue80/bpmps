@@ -89,6 +89,31 @@ BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CTime Wk1, CString FullInde
 	}
 	ResultArray.Add(ResultStr);
 
+	///////////////////////////////
+	if (!QueryFinalResult_LastWeekOrder(StartingDate, FullIndex, ResultStr))
+		return FALSE;
+	ResultArray.Add(ResultStr);
+	double LastWeekOrder = atof(ResultStr);
+
+	///////////////////////////////
+	if (!QueryFinalResult_RecommendedWithoutLastWeekOrder(
+		OpenInv, OutstandingPO, LastWeekOrder, LTForecast, ResultStr))
+	{
+		return FALSE;
+	}
+	ResultArray.Add(ResultStr);
+	double RecommendWithoutLastWeekOrder = atof(ResultStr);
+
+	///////////////////////////////
+	if (!QueryFinalResult_ProductionTag(LastWeekOrder, RecommendWithoutLastWeekOrder, ResultStr))
+		return FALSE;
+	ResultArray.Add(ResultStr);
+
+	//////////////////////////////
+	if (!QueryFinalResult_Arrival(ResultStr))
+		return FALSE;
+	ResultArray.Add(ResultStr);
+
 	return TRUE;
 }
 
@@ -195,7 +220,7 @@ BOOL CMPSCore::QueryFinalResult_OutstandingPO( CTime StartingDate, CString FullI
 		this->SelectQuery(SqlStr);
 
 		MYSQL_ROW Row = this->GetRecord();
-		if (!Row || !Row[0])
+		if (!Row)
 		{
 			this->FreeRecord();
 			return FALSE;
@@ -407,18 +432,155 @@ BOOL CMPSCore::QueryFinalResult_RecommendedOrderVolume(
 		return FALSE;
 	}
 
-	double AdjustedAveWeeklySale = GetAdjustedAveWeeklySaleVol(SaleVolume);
+	double m_AdjustedAveWeeklySale // to be used in QueryFinalResult_RecommendedWithoutLastWeekOrder
+		= GetAdjustedAveWeeklySaleVol(SaleVolume);
 	double RecommendedOrderVolume = 0;
 
-	if ((OpenInv+OutstandingPO-max(0,LTForecast-m_LeadTime*AdjustedAveWeeklySale)) < m_ROP)
+	if ((OpenInv+OutstandingPO-max(0,LTForecast-m_LeadTime*m_AdjustedAveWeeklySale)) < m_ROP)
 	{
 		RecommendedOrderVolume = max(m_ROQ,m_ROQ + m_SafeStock +
-			max(LTForecast,m_LeadTime*AdjustedAveWeeklySale) - OpenInv - OutstandingPO);
+			max(LTForecast,m_LeadTime*m_AdjustedAveWeeklySale) - OpenInv - OutstandingPO);
 	}
 
 	ResultStr.Format("%0.3f", RecommendedOrderVolume);
 	return TRUE;
 }
+
+
+BOOL CMPSCore::QueryFinalResult_ActionFlag(
+	const CString &SaleVSForecast,
+	const CString &RecommendedOrderVolume,
+	CString &ResultStr
+	)
+{
+	double volume = atof(RecommendedOrderVolume);
+	ASSERT ( volume >= 0 );
+
+	if (volume < 0)
+		return FALSE;
+
+	if ((SaleVSForecast.CompareNoCase("Undersell") == 0) && (volume > 0))
+		ResultStr = "Review FC Down";
+	else if ((SaleVSForecast.CompareNoCase("Oversell") == 0) && (volume == 0))
+		ResultStr = "Review FC Upwards";
+	else
+		ResultStr = "-";
+
+	return TRUE;
+}
+
+BOOL CMPSCore::QueryFinalResult_LastWeekOrder(
+	CTime StartingDate, CString FullIndex, CString &ResultStr
+	)
+{
+	CString SqlStr;
+
+	this->m_arrival = 0; // 避免重复计算，这个函数中直接把本周将到达的数量算出来
+
+	SqlStr.Format("SELECT `jdeorderdate`, `jdevolume` FROM `plannedarrival_o` "
+			"WHERE (%s) and (%s)",
+			(LPCTSTR) this->m_ConditionWh,
+			(LPCTSTR) this->m_ConditionSku
+			);
+
+	if (!this->SelectQuery(SqlStr))
+		return FALSE;
+	MYSQL_ROW Row = this->GetRecord();
+
+	double VolumeSum = 0;
+
+	while ( Row && Row[0] && Row[1])
+	{
+		CString strYear, strMonth, strDay;
+		CString debug;
+
+		AfxExtractSubString(strYear,  Row[0], 0, '-');
+		AfxExtractSubString(strMonth, Row[0], 1, '-');
+		AfxExtractSubString(strDay,   Row[0], 2, '-');
+	
+		CTime OrderDate(atoi(strYear), atoi(strMonth), atoi(strDay), 0, 0, 0);
+		debug = OrderDate.Format("%A, %B %d, %Y");
+		
+		CTime ExpectedArrivalDate = OrderDate + CTimeSpan(this->m_LeadTime * 7, 0, 0, 0);
+		debug = ExpectedArrivalDate.Format("%A, %B %d, %Y");
+
+		CTimeSpan span = ExpectedArrivalDate - StartingDate;
+		if (span.GetDays() >= 7 && span.GetDays() < 14)
+		{
+			m_arrival += atoi(Row[1]);
+		}
+
+		CTime ModifiedArrivalDate = (ExpectedArrivalDate < StartingDate)
+			? StartingDate+CTimeSpan(1,0,0,0) : ExpectedArrivalDate;
+		debug = ModifiedArrivalDate.Format("%A, %B %d, %Y");
+
+		CTimeSpan offset = ModifiedArrivalDate - StartingDate;
+		ULONGLONG a = offset.GetDays();
+
+		CTime ModifiedOrderDate = StartingDate - CTimeSpan((LONG)(this->m_LeadTime - offset.GetDays() / 7) * 7, 0,0,0);
+		debug = ModifiedOrderDate.Format("%A, %B %d, %Y");
+
+		CTimeSpan offset2 = StartingDate - ModifiedOrderDate;
+		a = offset2.GetDays();
+
+		if ( offset2.GetDays() == 7 )
+			VolumeSum += atoi(Row[1]);
+
+		// Next
+		Row = this->GetRecord();
+	}
+
+	ResultStr.Format("%0.3f", VolumeSum);
+	this->FreeRecord();
+
+	return TRUE;
+}
+
+BOOL CMPSCore::QueryFinalResult_RecommendedWithoutLastWeekOrder(
+	double OpenInv,
+	double OutstandingPO,
+	double LastWeekOrder,
+	double LTForecast,
+	CString &ResultStr
+	)
+{
+	double tmp = OpenInv + OutstandingPO - LastWeekOrder
+		- max(0, LTForecast - m_LeadTime * m_AdjustedAveWeeklySale);
+
+	if ( tmp >= m_ROP )
+		ResultStr.Empty();
+	else
+	{
+		tmp = max(m_ROQ, m_ROQ + m_SafeStock + max(LTForecast,
+			m_LeadTime * m_AdjustedAveWeeklySale) - OpenInv - OutstandingPO);
+		ResultStr.Format("%0.3f", tmp);
+	}
+
+	return TRUE;
+}
+
+BOOL CMPSCore::QueryFinalResult_ProductionTag(
+	double LastWeekOrder,
+	double RecommendWithoutLastWeekOrder,
+	CString &ResultStr
+	)
+{
+	if (RecommendWithoutLastWeekOrder == 0 && LastWeekOrder != 0)
+		ResultStr = "Cut Production";
+	else
+		ResultStr = "-";
+
+	return TRUE;
+}
+
+BOOL CMPSCore::QueryFinalResult_Arrival(
+	CString &ResultStr
+	)
+{
+	ResultStr.Format("%0.3f", this->m_arrival);
+	return TRUE;
+}
+
 
 // 在数据库中建一个新的SKU组合名
 BOOL CMPSCore::CreateNewSkuCombination(const CString &CbName, CString *pErrStr)
@@ -450,6 +612,8 @@ BOOL CMPSCore::GetAllSkuCodesOfCombination( const CString &strName, CArray<CStri
 	{
 		pSkuCodes->Add(row[0]);
 	}
+
+	this->FreeRecord();
 
 	return TRUE;
 }
@@ -747,26 +911,4 @@ double CMPSCore::GetSafeStock(const CString &FullIndex)
 	this->FreeRecord();
 
 	return SS;
-}
-
-BOOL CMPSCore::QueryFinalResult_ActionFlag(
-	const CString &SaleVSForecast,
-	const CString &RecommendedOrderVolume,
-	CString &ResultStr
-	)
-{
-	double volume = atof(RecommendedOrderVolume);
-	ASSERT ( volume >= 0 );
-
-	if (volume < 0)
-		return FALSE;
-
-	if ((SaleVSForecast.CompareNoCase("Undersell") == 0) && (volume > 0))
-		ResultStr = "Review FC Down";
-	else if ((SaleVSForecast.CompareNoCase("Oversell") == 0) && (volume == 0))
-		ResultStr = "Review FC Upwards";
-	else
-		ResultStr = "-";
-
-	return TRUE;
 }
