@@ -115,6 +115,10 @@ protected:
 		CString &ResultStr
 		);
 
+	BOOL QueryFinalResult_Sales(
+		CTime StartingDate, CString FullIndex, CString &ResultStr
+		);
+
 	// 计算一个月份中的工作日数量
 	int  GetWorkdayPerMonth(int year, int month);
 
@@ -150,12 +154,22 @@ public: // TODO: change to protected functions
 	double GetROQ(const CString &FullIndex);
 
 	double GetSafeStock(const CString &FullIndex);
+	
+	//
+	// monthlyforecast_o
+	// 获取该物品，在某天的预计销售数量
+	// 说明，销售按照月份预估，因此根据每个月的工作日数，平摊销售数据到每日
+	double GetDailyForecast(const CTime &date, const CString &FullIndex);
 
 private:
 
 	CQueryFilter m_QueryFilter;
 
 	CArray<CString> m_ResultFieldsName;
+
+	// Key CString,   like 2010-9-1
+	// value double,  该月每日预估的销售额
+	CMap<CString,LPCTSTR,double,double> m_MonthlyForecastMap;
 
 	// 用于QueryFinalResult，保存中间变量，避免重复计算
 	CString m_ConditionWh;

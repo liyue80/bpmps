@@ -49,6 +49,7 @@ BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CTime Wk1, CString FullInde
 	CString ResultStr;
 
 	ResultArray.RemoveAll();
+	this->m_MonthlyForecastMap.RemoveAll();
 
 	m_ROP = this->GetROP(FullIndex);
 	m_ROQ = this->GetROQ(FullIndex);
@@ -111,6 +112,11 @@ BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CTime Wk1, CString FullInde
 
 	//////////////////////////////
 	if (!QueryFinalResult_Arrival(ResultStr))
+		return FALSE;
+	ResultArray.Add(ResultStr);
+
+	//////////////////////////////
+	if (!QueryFinalResult_Sales(StartingDate, FullIndex, ResultStr))
 		return FALSE;
 	ResultArray.Add(ResultStr);
 
@@ -273,7 +279,7 @@ BOOL CMPSCore::QueryFinalResult_OutstandingPO( CTime StartingDate, CString FullI
 
 BOOL CMPSCore::QueryFinalResult_LTForecast( CTime StartingDate, CString FullIndex, CString &ResultStr )
 {
-	CMap<CString,LPCTSTR,double,double> MonthlyForecastMap;
+	//CMap<CString,LPCTSTR,double,double> MonthlyForecastMap;
 	int iLeadTimeDay = (m_LeadTime - 1) * 7;
 	double Forecast = 0.0f;
 
@@ -281,74 +287,21 @@ BOOL CMPSCore::QueryFinalResult_LTForecast( CTime StartingDate, CString FullInde
 
 	for (int i = 0; i < iLeadTimeDay; i++)
 	{
-		CString Month;
-		double  DailyForecast = 0;
-
+		// TODO: 用单个函数来计算是否工作日
 		if (StartingDate.GetDayOfWeek() == 1 || StartingDate.GetDayOfWeek() == 7)
 		{
 			StartingDate = StartingDate + CTimeSpan(1, 0, 0, 0);
 			continue;
 		}
 
-		Month.Format("%d-%d-1", StartingDate.GetYear(), StartingDate.GetMonth());
+		Forecast += this->GetDailyForecast(StartingDate, FullIndex);
 
-		if (!MonthlyForecastMap.Lookup(Month, DailyForecast))
-		{
-			CString SqlStr;
-
-			SqlStr.Format("SELECT forecastvolume FROM monthlyforecast_o"
-				" where fullindex like '%%%s%%' and forecastmonth='%s'",
-				(LPCTSTR)FullIndex,
-				(LPCTSTR)Month);
-
-			this->SelectQuery(SqlStr);
-
-			MYSQL_ROW Row = this->GetRecord();
-			if (Row == NULL)
-			{
-				DailyForecast = 0;
-			}
-			else
-			{
-				DailyForecast = atof((LPCTSTR) Row[0]);
-				DailyForecast = DailyForecast / GetWorkdayPerMonth(StartingDate.GetYear(), StartingDate.GetMonth());
-			}
-			MonthlyForecastMap.SetAt(Month, DailyForecast);
-			this->FreeRecord();
-		}
-
+		// Next
 		StartingDate = StartingDate + CTimeSpan(1, 0, 0, 0);
-
-		Forecast += DailyForecast;
-		//TRACE2("%f => %f\n", DailyForecast, Forecast);
 	}
 
 	ResultStr.Format("%0.3f", Forecast);
 	return TRUE;
-}
-
-// 计算一个月份中的工作日数量
-int CMPSCore::GetWorkdayPerMonth( int year, int month )
-{
-	int days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-	int ret = 20;
-
-	if ( month == 2 && year % 4 != 0 )
-	{
-		return ret;	// 非闰2月份正好整4周
-	}
-
-	for (int i = 28; i < days[month - 1]; i++)
-	{
-		CTime time(year, month, i + 1, 0, 0, 0);
-		int tmp = time.GetDayOfWeek();
-		if (tmp != 1 && tmp != 7)
-		{
-			ret++;
-		}
-	}
-
-	return ret;
 }
 
 BOOL CMPSCore::QueryFinalResult_SaleVSForecast( CTime StartingDate, CString FullIndex, CString &ResultStr )
@@ -573,6 +526,7 @@ BOOL CMPSCore::QueryFinalResult_ProductionTag(
 	return TRUE;
 }
 
+// 根据原算法理解，此函数返回的是根据已下订单推算出的下一个星期(7~14天)的到货量
 BOOL CMPSCore::QueryFinalResult_Arrival(
 	CString &ResultStr
 	)
@@ -581,6 +535,24 @@ BOOL CMPSCore::QueryFinalResult_Arrival(
 	return TRUE;
 }
 
+BOOL CMPSCore::QueryFinalResult_Sales(
+	CTime StartingDate, CString FullIndex, CString &ResultStr
+	)
+{
+	double sum = 0;
+	for ( int i = 0; i < 7; i++)
+	{
+		CTime date = StartingDate + CTimeSpan(i, 0, 0, 0);
+		// TODO: 用单个函数来计算是否工作日
+		if (date.GetDayOfWeek() == 1 || date.GetDayOfWeek() == 7)
+			continue;
+
+		sum += this->GetDailyForecast(date, FullIndex);
+	}
+
+	ResultStr.Format("%0.3f", sum);
+	return TRUE;
+}
 
 // 在数据库中建一个新的SKU组合名
 BOOL CMPSCore::CreateNewSkuCombination(const CString &CbName, CString *pErrStr)
@@ -912,3 +884,67 @@ double CMPSCore::GetSafeStock(const CString &FullIndex)
 
 	return SS;
 }
+
+// 计算一个月份中的工作日数量
+int CMPSCore::GetWorkdayPerMonth( int year, int month )
+{
+	int days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+	int ret = 20;
+
+	if ( month == 2 && year % 4 != 0 )
+	{
+		return ret;	// 非闰2月份正好整4周
+	}
+
+	for (int i = 28; i < days[month - 1]; i++)
+	{
+		CTime time(year, month, i + 1, 0, 0, 0);
+		int tmp = time.GetDayOfWeek();
+		if (tmp != 1 && tmp != 7)
+		{
+			ret++;
+		}
+	}
+
+	return ret;
+}
+
+//
+// monthlyforecast_o
+// 获取该物品，在某天的预计销售数量
+// 说明，销售按照月份预估，因此根据每个月的工作日数，平摊销售数据到每日
+double CMPSCore::GetDailyForecast(const CTime &date, const CString &FullIndex)
+{
+	CString key;
+	double  value = 0;
+
+	key.Format("%d-%d-1", date.GetYear(), date.GetMonth());
+
+	if ( !this->m_MonthlyForecastMap.Lookup(key, value))
+	{
+		CString SqlStr;
+
+		SqlStr.Format("SELECT forecastvolume FROM monthlyforecast_o"
+			" where fullindex like '%%%s%%' and forecastmonth='%s'",
+			(LPCTSTR)FullIndex,
+			(LPCTSTR)key);
+
+		this->SelectQuery(SqlStr);
+
+		MYSQL_ROW Row = this->GetRecord();
+		if (Row == NULL)
+		{
+			value = 0;
+		}
+		else
+		{
+			value = atof((LPCTSTR) Row[0]);
+			value = value / GetWorkdayPerMonth(date.GetYear(), date.GetMonth());
+		}
+		m_MonthlyForecastMap.SetAt(key, value);
+		this->FreeRecord();
+	}
+
+	return value;
+}
+
