@@ -168,7 +168,7 @@ LRESULT CMainFrame::OnMessage_BtnClickQuery(WPARAM wParam, LPARAM lParam)
 {
 	ASSERT(lParam != NULL);
 
-	CResultView *pResultView = NULL;
+	CResultTreeview *pResultView = NULL;
 
 	pResultView = this->m_wndView.GetResultView();
 

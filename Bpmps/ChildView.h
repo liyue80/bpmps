@@ -3,7 +3,7 @@
 
 
 #pragma once
-#include "ResultView.h"
+#include "ResultTreeview.h"
 #include "SkuListView.h"
 
 // CChildView window
@@ -16,7 +16,7 @@ public:
 
 // Attributes
 public:
-	CResultView* GetResultView(void)
+	CResultTreeview* GetResultView(void)
 	{
 		return this->m_pResultView;
 	};
@@ -42,7 +42,7 @@ protected:
 	afx_msg void OnPaint();
 	DECLARE_MESSAGE_MAP()
 private:
-	CResultView* m_pResultView;
+	CResultTreeview* m_pResultView;
 	CSkuListView* m_pSkuListView;
 public:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
