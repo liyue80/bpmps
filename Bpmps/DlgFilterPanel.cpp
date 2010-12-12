@@ -4,7 +4,7 @@
 #include "stdafx.h"
 #include "Bpmps.h"
 #include "DlgFilterPanel.h"
-#include "MPSCore.h"
+#include "WorkThread.h"
 
 // CDlgFilterPanel dialog
 
@@ -57,6 +57,16 @@ void CDlgFilterPanel::OnBnClickedStartQuery()
 		return;
 	}
 
+	LPMAINWORKTHREADPARAM lpThreadParam = new MAINWORKTHREADPARAM;
+	lpThreadParam->_StartingDate = SelTime.GetTime();
+	lpThreadParam->_FirstWeekSale = SaleWk1.GetTime();
+	CWinThread *pWinThread = AfxBeginThread(
+		(AFX_THREADPROC) MainWorkThreadFunc, (LPVOID) lpThreadParam,
+		THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED);
+	pWinThread->m_bAutoDelete = TRUE;
+	pWinThread->ResumeThread();
+
+#if 0
 	CQueryFilter *pFilter = new CQueryFilter;
 	pFilter->StartingDate = SelTime;
 	pFilter->FirstWeekSale = SaleWk1;
@@ -65,6 +75,7 @@ void CDlgFilterPanel::OnBnClickedStartQuery()
 	// wParam - Reserved
 	// lParam - Pointer to Query Filter
 	AfxGetApp()->GetMainWnd()->SendMessage(WM_BTN_CLICK_QUERY, 0, (LPARAM)pFilter);
+#endif
 }
 
 void CDlgFilterPanel::ResetDimension(void)

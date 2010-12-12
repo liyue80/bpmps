@@ -123,6 +123,56 @@ BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CTime Wk1, CString FullInde
 	return TRUE;
 }
 
+/////
+// 从数据库表格 openinv_o 中累加符合条件的库存
+//     Warehouse条件可以为空，则累加所有仓库的库存
+//
+BOOL CMPSCore::GetFirstOpenInv(
+	/* IN */  const CTime & StartingDate,
+	/* IN */  const CString & SkuCode,
+	/* IN */  const CString & Warehouse,
+	/* OUT */ CString & Volume)
+{
+	// SQL语句中可能出现的条件
+	CString CondSkuCode, CondWarehouse, CondTime;
+	CString SQL;
+
+	// 条件时间 CondTime
+	CTime EndTime = StartingDate + CTimeSpan(7, 0, 0, 0);
+	CondTime.Format("((`opendate`>= '%s') and (`opendate`<'%s'))",
+		ConvertDateToString(StartingDate), ConvertDateToString(EndTime));
+
+	// 条件 CondSkuCode
+	ASSERT(SkuCode.GetLength() != 0);
+	if (SkuCode.GetLength() <= 0)
+		return FALSE;
+	CondSkuCode.Format("(`jdeskucode`='%s')", (LPCTSTR)SkuCode);
+
+	// 条件 CondWarehouse
+	if (Warehouse.GetLength() > 0)
+		CondWarehouse.Format("(`jdewh`='%s')", (LPCTSTR)Warehouse);
+
+	// 组成完整的SQL语句
+	SQL.Format("SELECT SUM(`skuvolume`) from `openinv_o where %s and %s`",
+		CondTime, CondSkuCode);
+	if (CondWarehouse.GetLength() > 0)
+	{
+		SQL.Append(" and ");
+		SQL.Append(CondWarehouse);
+	}
+
+	// 执行SQL
+	if ( SelectQuery(SQL) != TRUE )
+		return FALSE;
+	MYSQL_ROW row = GetRecord();
+	if ( !row || !row[0] )
+		return FALSE;
+
+	Volume.Format("%s", row[0]);
+
+	return TRUE;
+}
+
 BOOL CMPSCore::QueryFinalResult_OpenInv( CTime StartingDate, CString FullIndex, CString &ResultStr )
 {
 	CString SqlStr;

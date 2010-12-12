@@ -76,12 +76,6 @@ void CResultTreeview::OnInitialUpdate()
 
 	// Refresh tree view based on its header controller
 	this->UpdateColumns();
-
-#if defined(DEBUG)
-	HTREEITEM p1 = this->GetTreeCtrl().InsertItem("p1");
-	HTREEITEM c1 = this->GetTreeCtrl().InsertItem("c1", p1);
-	ModifyStyle(NULL, TVS_HASLINES |TVS_LINESATROOT);
-#endif
 }
 
 BOOL CResultTreeview::UpdateData( const CQueryFilter *pQueryFilter )
