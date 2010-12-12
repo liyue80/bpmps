@@ -30,11 +30,33 @@ UINT AFX_CDECL SubWorkThreadFunc(LPVOID *lpParam)
 {
 	ASSERT(lpParam != NULL);
 
+	CMPSCore Core;
+	BOOL bRet = FALSE;
 	LPSUBWORKTHREADPARAM pParam = (LPSUBWORKTHREADPARAM) lpParam;
+	CString OpenInvFirst;
 
 	TRACE1("SubWorkThreadFunc begin - %s\n", pParam->_SkuCode);
 
-	// blahblahblah
+	// 连接数据库
+	bRet = Core.ConnectDB("127.0.0.1", "root", "", "test", 0, NULL, 0);
+
+	if (bRet)
+	{
+		bRet = Core.GetFirstOpenInv(CTime(pParam->_StartingDate),
+			CString(pParam->_SkuCode), CString(pParam->_WareHouse),
+			OpenInvFirst);
+	}
+
+	if (bRet)
+	{
+		APPENDING_RECORD * pRecord = new APPENDING_RECORD;
+		strcpy_s(pRecord->_SkuCode, pParam->_SkuCode);
+		strcpy_s(pRecord->_Warehouse, pParam->_WareHouse);
+		strcpy_s(pRecord->_OpenInvFirst, (LPCTSTR)OpenInvFirst);
+
+		AfxGetApp()->GetMainWnd()->SendMessage(
+			WM_USER_UI_APPEND_RECORD, (WPARAM)0, (LPARAM)(LPVOID)pRecord);
+	}
 
 	// 结束时释放一个子线程
 	gSubThreadCount.Unlock(1);

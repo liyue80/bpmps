@@ -160,6 +160,7 @@ public: // TODO: change to protected functions
 	// 获取该物品，在某天的预计销售数量
 	// 说明，销售按照月份预估，因此根据每个月的工作日数，平摊销售数据到每日
 	double GetDailyForecast(const CTime &date, const CString &FullIndex);
+
 	BOOL GetFirstOpenInv( /* IN */ const CTime & StartingDate,
 		/* IN */ const CString & SkuCode, /* IN */ const CString & Warehouse,
 		/* OUT */ CString & Volume);

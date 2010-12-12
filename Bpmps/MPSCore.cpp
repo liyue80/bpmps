@@ -153,7 +153,7 @@ BOOL CMPSCore::GetFirstOpenInv(
 		CondWarehouse.Format("(`jdewh`='%s')", (LPCTSTR)Warehouse);
 
 	// 组成完整的SQL语句
-	SQL.Format("SELECT SUM(`skuvolume`) from `openinv_o where %s and %s`",
+	SQL.Format("SELECT SUM(`skuvolume`) from `openinv_o` where %s and %s",
 		CondTime, CondSkuCode);
 	if (CondWarehouse.GetLength() > 0)
 	{

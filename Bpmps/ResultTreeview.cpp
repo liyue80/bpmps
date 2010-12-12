@@ -20,6 +20,7 @@ CResultTreeview::~CResultTreeview()
 }
 
 BEGIN_MESSAGE_MAP(CResultTreeview, CColumnTreeView)
+	ON_MESSAGE(WM_USER_UI_APPEND_RECORD, &CResultTreeview::OnMessage_AppendRecord)
 END_MESSAGE_MAP()
 
 void CResultTreeview::OnInitialUpdate()
@@ -127,5 +128,26 @@ BOOL CResultTreeview::UpdateData( const CQueryFilter *pQueryFilter )
 	return TRUE;
 }
 
+// WM_USER_UI_APPEND_RECORD
+LRESULT CResultTreeview::OnMessage_AppendRecord( WPARAM wParam, LPARAM lParam )
+{
+	ASSERT (lParam != NULL);
+
+	APPENDING_RECORD * pParam = (APPENDING_RECORD *) lParam;
+
+	HTREEITEM hItem = NULL;
+	CString ItemString;
+	CTreeCtrl &TreeCtrl = this->GetTreeCtrl();
+
+	hItem = TreeCtrl.InsertItem(pParam->_SkuCode, TVI_ROOT, TVI_LAST);
+	if (hItem != NULL)
+	{
+		ItemString.Format("%s\t%s", pParam->_Warehouse, pParam->_OpenInvFirst);
+		TreeCtrl.InsertItem((LPCTSTR)ItemString, hItem, TVI_LAST);
+	}
+
+	delete pParam;
+	return 0;
+}
 
 // CResultTreeview 消息处理程序

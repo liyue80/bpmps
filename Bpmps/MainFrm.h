@@ -47,6 +47,7 @@ protected:
 	afx_msg void OnSetFocus(CWnd *pOldWnd);
 	//afx_msg LRESULT OnStarQuery(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMessage_BtnClickQuery(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMessage_AppendRecord(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 private:
 	CDlgFilterPanel m_DlgFilterPanel;
@@ -57,7 +58,6 @@ public:
 	afx_msg void OnMenu_SkuList();
 protected:
 	void HideAllPanelExclude(const CDialog *pDlgExclude);
-	CMPSCore * GetCore(void) const;
 
 public:
 	afx_msg void OnConnect();
