@@ -45,4 +45,5 @@ typedef struct tagAppendingRecord
 	char _SkuCode[45];
 	char _Warehouse[45];
 	char _OpenInvFirst[32];
+	char _OutstandingPO[32];
 } APPENDING_RECORD;

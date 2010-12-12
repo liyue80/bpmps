@@ -139,11 +139,20 @@ LRESULT CResultTreeview::OnMessage_AppendRecord( WPARAM wParam, LPARAM lParam )
 	CString ItemString;
 	CTreeCtrl &TreeCtrl = this->GetTreeCtrl();
 
-	hItem = TreeCtrl.InsertItem(pParam->_SkuCode, TVI_ROOT, TVI_LAST);
+	if ( !m_TreeItemMap.Lookup(pParam->_SkuCode, hItem) )
+	{
+		hItem = TreeCtrl.InsertItem(pParam->_SkuCode, TVI_ROOT, TVI_LAST);
+	}
+
 	if (hItem != NULL)
 	{
-		ItemString.Format("%s\t%s", pParam->_Warehouse, pParam->_OpenInvFirst);
-		TreeCtrl.InsertItem((LPCTSTR)ItemString, hItem, TVI_LAST);
+		m_TreeItemMap.SetAt(pParam->_SkuCode, hItem);
+		ItemString.Format("%s\t%s\t%s",
+			pParam->_Warehouse, pParam->_OpenInvFirst, pParam->_OutstandingPO);
+		if (TreeCtrl.InsertItem((LPCTSTR)ItemString, hItem, TVI_LAST) != NULL)
+		{
+			TreeCtrl.Expand(hItem, TVE_EXPAND);
+		}
 	}
 
 	delete pParam;

@@ -127,7 +127,7 @@ BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CTime Wk1, CString FullInde
 // 从数据库表格 openinv_o 中累加符合条件的库存
 //     Warehouse条件可以为空，则累加所有仓库的库存
 //
-BOOL CMPSCore::GetFirstOpenInv(
+BOOL CMPSCore::QueryGetFirstOpenInv(
 	/* IN */  const CTime & StartingDate,
 	/* IN */  const CString & SkuCode,
 	/* IN */  const CString & Warehouse,
@@ -136,6 +136,8 @@ BOOL CMPSCore::GetFirstOpenInv(
 	// SQL语句中可能出现的条件
 	CString CondSkuCode, CondWarehouse, CondTime;
 	CString SQL;
+	BOOL bRet = FALSE;
+	MYSQL_ROW row = NULL;
 
 	// 条件时间 CondTime
 	CTime EndTime = StartingDate + CTimeSpan(7, 0, 0, 0);
@@ -162,15 +164,19 @@ BOOL CMPSCore::GetFirstOpenInv(
 	}
 
 	// 执行SQL
-	if ( SelectQuery(SQL) != TRUE )
-		return FALSE;
-	MYSQL_ROW row = GetRecord();
-	if ( !row || !row[0] )
-		return FALSE;
+	bRet = SelectQuery(SQL);
+	if (bRet)
+	{
+		row = GetRecord();
+		if ( !row || !row[0] )
+			Volume = "0";
+		else
+			Volume.Format("%s", row[0]);
+	}
 
-	Volume.Format("%s", row[0]);
+	FreeRecord();
 
-	return TRUE;
+	return bRet;
 }
 
 BOOL CMPSCore::QueryFinalResult_OpenInv( CTime StartingDate, CString FullIndex, CString &ResultStr )
@@ -263,6 +269,168 @@ BOOL CMPSCore::QueryFinalResult_OpenInv( CTime StartingDate, CString FullIndex, 
 	this->FreeRecord();
 
 	return TRUE;	
+}
+
+/////
+// 从数据库表格 openinv_o 中累加符合条件的库存
+//     Warehouse条件可以为空，则累加所有仓库的库存
+//
+BOOL CMPSCore::QueryGetOutstandingPO(
+	/* IN */  const CTime & StartingDate,
+	/* IN */  const CString & SkuCode,
+	/* IN */  const CString & Warehouse,
+	/* OUT */ CString & OutstandingPO)
+{
+	CString CondSkuCode, CondWarehouse, CondTime;
+	BOOL bRet = FALSE;
+	MYSQL_ROW row = NULL;
+
+	// 条件 CondSkuCode
+	ASSERT(SkuCode.GetLength() != 0);
+	if (SkuCode.GetLength() <= 0)
+		return FALSE;
+	CondSkuCode.Format("(`jdeskucode`='%s')", (LPCTSTR)SkuCode);
+
+	// 条件 CondWarehouse
+	if (Warehouse.GetLength() > 0)
+		CondWarehouse.Format("(`jdewh`='%s')", (LPCTSTR)Warehouse);
+
+	// 准备“常量”
+	// 条件 CondTime
+	int iLeadTime = 0;
+	bRet = QueryGetLeadTime(SkuCode, Warehouse, iLeadTime);
+	if (bRet)
+	{
+		CTime OrderDate = StartingDate - CTimeSpan(iLeadTime * 7, 0, 0, 0);
+		CondTime.Format("(`jdeorderdate`>='%s' and `jdeorderdate`<='%s')",
+			ConvertDateToString(OrderDate), ConvertDateToString(StartingDate));
+	}
+
+	if (bRet)
+	{
+		// 组成完整的SQL语句
+		CString SQL;
+		SQL.Format(
+			"SELECT SUM(`jdevolume`) FROM `plannedarrival_o` WHERE %s AND %s",
+			(LPCTSTR)CondSkuCode, (LPCTSTR)CondTime);
+		if (CondWarehouse.GetLength() > 0)
+		{
+			SQL.Append(" and ");
+			SQL.Append(CondWarehouse);
+		}
+
+		// 执行SQL
+		bRet = SelectQuery(SQL);
+	}
+
+	if (bRet)
+	{
+		row = GetRecord();
+		if ( !row || !row[0] )
+			OutstandingPO = "0";
+		else
+			OutstandingPO.Format("%s", row[0]);
+	}
+
+	FreeRecord();
+
+	return bRet;
+
+}
+
+/////
+// 从数据库 warehouse_d 中查得仓库的所在地 如：TC-BD
+//     输入 
+BOOL CMPSCore::QueryGetWarehouseLocation(
+	/* IN */  const CString & Warehouse,
+	/* OUT */ CString & Location)
+{
+	CString SQL;
+	BOOL bRet = FALSE;
+	MYSQL_ROW row = NULL;
+
+	SQL.Format("SELECT `description` FROM `warehouse_d` WHERE `jdewh`='%s'",
+		(LPCTSTR)Warehouse);
+
+	bRet = SelectQuery((LPCTSTR)SQL);
+
+	if (bRet)
+	{
+		row = GetRecord();
+		if (!row || !row[0])
+			bRet = FALSE;
+	}
+
+	if (bRet)
+	{
+		Location = row[0];
+	}
+
+	FreeRecord();
+	return bRet;
+}
+
+/////
+// 从数据库表 modelengine_o 中查得leadtime
+// 如何获得LeadTime
+// 根据 Warehouse（如“MJCNN365”）查表 warehouse_d，获得仓库所在地地址
+// 然后根据所在地址和 SkuCode 到 modalengine_o 表中查找 LeadTime
+//
+BOOL CMPSCore::QueryGetLeadTime(
+	/* IN */  const CString & SkuCode,
+	/* IN */  const CString & Warehouse,
+	/* OUT */ int &iLeadTime
+	)
+{
+	CString SQL;
+	CString WarehouseLoc;
+	BOOL bRet = FALSE;
+	MYSQL_ROW row = NULL;
+
+	SQL.Format("SELECT `description` FROM `warehouse_d` WHERE `jdewh`='%s'",
+		(LPCTSTR)Warehouse);
+
+	bRet = SelectQuery((LPCTSTR)SQL);
+
+	if (bRet)
+	{
+		row = GetRecord();
+		if (!row || !row[0])
+		{
+			TRACE0("Debug: QueryGetLeadTime return FALSE\n");
+			bRet = FALSE;
+		}
+	}
+
+	if (bRet)
+	{
+		WarehouseLoc = row[0];
+		FreeRecord();
+
+		SQL.Format("SELECT `leadtime` FROM `modelengine_o` " \
+			"WHERE (`fullindex` LIKE '%%\\_%s\\_%%') AND (`jdeskucode`='%s')",
+			(LPCTSTR)WarehouseLoc, (LPCTSTR)SkuCode);
+
+		bRet = SelectQuery((LPCTSTR)SQL);
+	}
+
+	if (bRet)
+	{
+		row = GetRecord();
+		if (!row || !row[0])
+		{
+			TRACE0("Debug: QueryGetLeadTime return FALSE\n");
+			bRet = FALSE;
+		}
+	}
+
+	if (bRet)
+	{
+		iLeadTime = atoi(row[0]);
+	}
+
+	FreeRecord();
+	return bRet;
 }
 
 BOOL CMPSCore::QueryFinalResult_OutstandingPO( CTime StartingDate, CString FullIndex, CString &ResultStr )

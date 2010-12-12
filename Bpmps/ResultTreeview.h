@@ -19,4 +19,7 @@ protected:
 	virtual void OnInitialUpdate();
 public:
 	BOOL UpdateData(const CQueryFilter *pQueryFilter);
+
+private:
+	CMap<CString, LPCTSTR, HTREEITEM, HTREEITEM> m_TreeItemMap;
 };

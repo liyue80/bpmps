@@ -9,7 +9,7 @@
 #define new DEBUG_NEW
 #endif
 
-#define MAX_WORK_THREAD_COUNT 3	// TODO: 修改为用户可配置参数
+#define MAX_WORK_THREAD_COUNT 1	// TODO: 修改为用户可配置参数
 
 // 用于限制子工作线程的数量
 CSemaphore gSubThreadCount(MAX_WORK_THREAD_COUNT, MAX_WORK_THREAD_COUNT);
@@ -34,6 +34,7 @@ UINT AFX_CDECL SubWorkThreadFunc(LPVOID *lpParam)
 	BOOL bRet = FALSE;
 	LPSUBWORKTHREADPARAM pParam = (LPSUBWORKTHREADPARAM) lpParam;
 	CString OpenInvFirst;
+	CString OutstandingPO;
 
 	TRACE1("SubWorkThreadFunc begin - %s\n", pParam->_SkuCode);
 
@@ -42,9 +43,16 @@ UINT AFX_CDECL SubWorkThreadFunc(LPVOID *lpParam)
 
 	if (bRet)
 	{
-		bRet = Core.GetFirstOpenInv(CTime(pParam->_StartingDate),
+		bRet = Core.QueryGetFirstOpenInv(CTime(pParam->_StartingDate),
 			CString(pParam->_SkuCode), CString(pParam->_WareHouse),
 			OpenInvFirst);
+	}
+
+	if (bRet)
+	{
+		bRet = Core.QueryGetOutstandingPO(CTime(pParam->_StartingDate),
+			CString(pParam->_SkuCode), CString(pParam->_WareHouse),
+			OutstandingPO);
 	}
 
 	if (bRet)
@@ -53,6 +61,7 @@ UINT AFX_CDECL SubWorkThreadFunc(LPVOID *lpParam)
 		strcpy_s(pRecord->_SkuCode, pParam->_SkuCode);
 		strcpy_s(pRecord->_Warehouse, pParam->_WareHouse);
 		strcpy_s(pRecord->_OpenInvFirst, (LPCTSTR)OpenInvFirst);
+		strcpy_s(pRecord->_OutstandingPO, (LPCTSTR)OutstandingPO);
 
 		AfxGetApp()->GetMainWnd()->SendMessage(
 			WM_USER_UI_APPEND_RECORD, (WPARAM)0, (LPARAM)(LPVOID)pRecord);
