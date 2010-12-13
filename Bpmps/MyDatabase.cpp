@@ -12,10 +12,10 @@ CMyDatabase::CMyDatabase(void)
 CMyDatabase::~CMyDatabase(void)
 {
 	if (this->m_query != NULL)
-	{
 		mysql_free_result( this->m_query );
-		mysql_close(&this->m_mysql);
-	}
+
+	if (this->m_mysql.host)
+		mysql_close(&m_mysql);
 }
 
 BOOL CMyDatabase::ConnectDB(LPCTSTR lpszHost, LPCTSTR lpszUser,
@@ -49,9 +49,9 @@ BOOL CMyDatabase::FindAndSave(LPCTSTR str)
 	TRACE1("%s\n", str);
 	if (mysql_query(&this->m_mysql, str) != 0)
 	{
+		TRACE1(".... %s\n", this->OutErrors());
 		return FALSE;
 	}
-
 	this->m_query = mysql_use_result(&this->m_mysql);
 	this->m_field = mysql_fetch_fields(this->m_query);
 

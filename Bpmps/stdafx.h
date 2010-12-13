@@ -52,6 +52,7 @@
 #include <afxcview.h>
 
 #include <WinSock.h>		// mysql.h need it
+#include <afxmt.h>
 
 
 

@@ -161,6 +161,19 @@ public: // TODO: change to protected functions
 	// 说明，销售按照月份预估，因此根据每个月的工作日数，平摊销售数据到每日
 	double GetDailyForecast(const CTime &date, const CString &FullIndex);
 
+	BOOL QueryGetWarehouseLocation( /* IN */ const CString & Warehouse,
+		/* OUT */ CString & Location);
+
+	BOOL QueryGetLeadTime( /* IN */ const CString & SkuCode,
+		/* IN */ const CString & Warehouse, /* OUT */ int &iLeadTime );
+
+	BOOL QueryGetFirstOpenInv( /* IN */ const CTime & StartingDate,
+		/* IN */ const CString & SkuCode, /* IN */ const CString & Warehouse,
+		/* OUT */ CString & Volume);
+
+	BOOL QueryGetOutstandingPO( /* IN */ const CTime & StartingDate,
+		/* IN */ const CString & SkuCode, /* IN */ const CString & Warehouse,
+		/* OUT */ CString & OutstandingPO);
 private:
 
 	CQueryFilter m_QueryFilter;

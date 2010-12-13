@@ -20,6 +20,7 @@ CResultTreeview::~CResultTreeview()
 }
 
 BEGIN_MESSAGE_MAP(CResultTreeview, CColumnTreeView)
+	ON_MESSAGE(WM_USER_UI_APPEND_RECORD, &CResultTreeview::OnMessage_UI_APPEND_RECORD)
 END_MESSAGE_MAP()
 
 void CResultTreeview::OnInitialUpdate()
@@ -76,12 +77,6 @@ void CResultTreeview::OnInitialUpdate()
 
 	// Refresh tree view based on its header controller
 	this->UpdateColumns();
-
-#if defined(DEBUG)
-	HTREEITEM p1 = this->GetTreeCtrl().InsertItem("p1");
-	HTREEITEM c1 = this->GetTreeCtrl().InsertItem("c1", p1);
-	ModifyStyle(NULL, TVS_HASLINES |TVS_LINESATROOT);
-#endif
 }
 
 BOOL CResultTreeview::UpdateData( const CQueryFilter *pQueryFilter )
@@ -133,5 +128,35 @@ BOOL CResultTreeview::UpdateData( const CQueryFilter *pQueryFilter )
 	return TRUE;
 }
 
+// WM_USER_UI_APPEND_RECORD
+LRESULT CResultTreeview::OnMessage_UI_APPEND_RECORD( WPARAM wParam, LPARAM lParam )
+{
+	ASSERT (lParam != NULL);
+
+	APPENDING_RECORD * pParam = (APPENDING_RECORD *) lParam;
+
+	HTREEITEM hItem = NULL;
+	CString ItemString;
+	CTreeCtrl &TreeCtrl = this->GetTreeCtrl();
+
+	if ( !m_TreeItemMap.Lookup(pParam->_SkuCode, hItem) )
+	{
+		hItem = TreeCtrl.InsertItem(pParam->_SkuCode, TVI_ROOT, TVI_LAST);
+	}
+
+	if (hItem != NULL)
+	{
+		m_TreeItemMap.SetAt(pParam->_SkuCode, hItem);
+		ItemString.Format("%s\t%s\t%s",
+			pParam->_Warehouse, pParam->_OpenInvFirst, pParam->_OutstandingPO);
+		if (TreeCtrl.InsertItem((LPCTSTR)ItemString, hItem, TVI_LAST) != NULL)
+		{
+			TreeCtrl.Expand(hItem, TVE_EXPAND);
+		}
+	}
+
+	delete pParam;
+	return 0;
+}
 
 // CResultTreeview 消息处理程序

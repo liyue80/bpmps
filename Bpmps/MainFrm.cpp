@@ -25,6 +25,8 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_COMMAND(ID_CONNECT, &CMainFrame::OnConnect)
 	ON_MESSAGE(WM_BTN_CLICK_QUERY, OnMessage_BtnClickQuery)
 	ON_COMMAND(ID_DATA_SKUCOMBINATIONMANAGEMENT, &CMainFrame::OnDataSkucombinationmanagement)
+	ON_MESSAGE(WM_USER_UI_APPEND_RECORD, &CMainFrame::OnMessage_UI_APPEND_RECORD)
+	ON_MESSAGE(WM_USER_UI_UPDATE_PROCESS, &CMainFrame::OnMessage_UI_UPDATE_PROCESS)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -173,7 +175,7 @@ LRESULT CMainFrame::OnMessage_BtnClickQuery(WPARAM wParam, LPARAM lParam)
 	pResultView = this->m_wndView.GetResultView();
 
 	ASSERT(pResultView != NULL);
-	
+
 	pResultView->UpdateData((const CQueryFilter *)lParam);
 
 	return 0L;
@@ -219,7 +221,7 @@ void CMainFrame::HideAllPanelExclude(const CDialog * pDlgExclude)
 
 void CMainFrame::OnConnect()
 {
-	CMPSCore *pCore = this->GetCore();
+#if 0
 	LPCTSTR lpszHost = _T("localhost");
 	LPCTSTR lpszUser = _T("root");
 
@@ -230,8 +232,10 @@ void CMainFrame::OnConnect()
 	}
 
 	TRACE2("Connected to MySQL @%s as %s\n", lpszHost, lpszUser);
+#endif
 }
 
+#if 0
 CMPSCore * CMainFrame::GetCore(void) const
 {
 	CBpmpsApp * pTheApp = (CBpmpsApp *) AfxGetApp();
@@ -240,9 +244,50 @@ CMPSCore * CMainFrame::GetCore(void) const
 
 	return &(pTheApp->m_MPSCore);
 }
+#endif
 
 void CMainFrame::OnDataSkucombinationmanagement()
 {
 	CDlgSkuCombMgt Dlg;
 	Dlg.DoModal();
+}
+
+// WM_USER_UI_APPEND_RECORD
+LRESULT CMainFrame::OnMessage_UI_APPEND_RECORD( WPARAM wParam, LPARAM lParam )
+{
+	return m_wndView.GetResultView()->OnMessage_UI_APPEND_RECORD(wParam, lParam);
+}
+
+LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
+{
+	UINT nCount = 0xFFFF & (UINT)lParam;
+	UINT nAmount = (UINT)lParam >> 16;
+
+	switch (wParam)
+	{
+	case RESET_PROCESS:
+		{
+			m_DlgFilterPanel.EnableWindow(FALSE);
+		}
+		break;
+	case UPDATE_PROCESS:
+		{
+			CString StateBarText;
+			StateBarText.Format("%u/%u", nCount, nAmount);
+			m_wndStatusBar.SetPaneText(0, (LPCTSTR)StateBarText);
+		}
+		break;
+	case END_PROCESS:
+		{
+			CString StateBarText;
+			StateBarText.Format("Done %u/%u", nCount, nAmount);
+			m_wndStatusBar.SetPaneText(0, (LPCTSTR)StateBarText);
+			m_DlgFilterPanel.EnableWindow(TRUE);
+		}
+		break;
+	default:
+		ASSERT(FALSE);
+	}
+
+	return 0;
 }

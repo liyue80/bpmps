@@ -123,24 +123,82 @@ BOOL CMPSCore::QueryFinalResult( CTime StartingDate, CTime Wk1, CString FullInde
 	return TRUE;
 }
 
+/////
+// 从数据库表格 openinv_o 中累加符合条件的库存
+//     Warehouse条件可以为空，则累加所有仓库的库存
+//
+BOOL CMPSCore::QueryGetFirstOpenInv(
+	/* IN */  const CTime & StartingDate,
+	/* IN */  const CString & SkuCode,
+	/* IN */  const CString & Warehouse,
+	/* OUT */ CString & Volume)
+{
+	// SQL语句中可能出现的条件
+	CString CondSkuCode, CondWarehouse, CondTime;
+	CString SQL;
+	BOOL bRet = FALSE;
+	MYSQL_ROW row = NULL;
+
+	// 条件时间 CondTime
+	CTime EndTime = StartingDate + CTimeSpan(7, 0, 0, 0);
+	CondTime.Format("((`opendate`>= '%s') and (`opendate`<'%s'))",
+		ConvertDateToString(StartingDate), ConvertDateToString(EndTime));
+
+	// 条件 CondSkuCode
+	ASSERT(SkuCode.GetLength() != 0);
+	if (SkuCode.GetLength() <= 0)
+		return FALSE;
+	CondSkuCode.Format("(`jdeskucode`='%s')", (LPCTSTR)SkuCode);
+
+	// 条件 CondWarehouse
+	if (Warehouse.GetLength() > 0)
+		CondWarehouse.Format("(`jdewh`='%s')", (LPCTSTR)Warehouse);
+
+	// 组成完整的SQL语句
+	SQL.Format("SELECT SUM(`skuvolume`) from `openinv_o` where %s and %s",
+		CondTime, CondSkuCode);
+	if (CondWarehouse.GetLength() > 0)
+	{
+		SQL.Append(" and ");
+		SQL.Append(CondWarehouse);
+	}
+
+	// 执行SQL
+	bRet = SelectQuery(SQL);
+	if (bRet)
+	{
+		row = GetRecord();
+		if ( !row || !row[0] )
+			Volume = "0";
+		else
+			Volume.Format("%s", row[0]);
+	}
+
+	FreeRecord();
+
+	return bRet;
+}
+
 BOOL CMPSCore::QueryFinalResult_OpenInv( CTime StartingDate, CString FullIndex, CString &ResultStr )
 {
 	CString SqlStr;
+
+	// 时间条件：StartingDate（含）之后7天内
 	CString Time1, Time2;
 	CTime   EndTime = StartingDate + CTimeSpan(7, 0, 0, 0);
-
 	Time1.Format("%d-%d-%d", StartingDate.GetYear(), StartingDate.GetMonth(), StartingDate.GetDay());
 	Time2.Format("%d-%d-%d", EndTime.GetYear(), EndTime.GetMonth(), EndTime.GetDay());
 
 	CString WarehouseDesc;
 	CString SkuIndex;
 
-	if (!AfxExtractSubString(WarehouseDesc, FullIndex, 1, '_'))
+	if (!AfxExtractSubString(WarehouseDesc, FullIndex, 1, '_')) // DL-MD
 		return FALSE;
-	if (!AfxExtractSubString(SkuIndex, FullIndex, 2, '_'))
+	if (!AfxExtractSubString(SkuIndex, FullIndex, 2, '_')) // INDEX2117
 		return FALSE;
 
 	// 仓库名
+	// 从DL-MD找到对应的仓库编号如3333851
 	MYSQL_ROW Row = NULL;
 	CArray <CString> WarehouseArray;
 	SqlStr.Format("select jdewh from warehouse_d where description='%s'", WarehouseDesc);
@@ -213,6 +271,168 @@ BOOL CMPSCore::QueryFinalResult_OpenInv( CTime StartingDate, CString FullIndex, 
 	this->FreeRecord();
 
 	return TRUE;	
+}
+
+/////
+// 从数据库表格 openinv_o 中累加符合条件的库存
+//     Warehouse条件可以为空，则累加所有仓库的库存
+//
+BOOL CMPSCore::QueryGetOutstandingPO(
+	/* IN */  const CTime & StartingDate,
+	/* IN */  const CString & SkuCode,
+	/* IN */  const CString & Warehouse,
+	/* OUT */ CString & OutstandingPO)
+{
+	CString CondSkuCode, CondWarehouse, CondTime;
+	BOOL bRet = FALSE;
+	MYSQL_ROW row = NULL;
+
+	// 条件 CondSkuCode
+	ASSERT(SkuCode.GetLength() != 0);
+	if (SkuCode.GetLength() <= 0)
+		return FALSE;
+	CondSkuCode.Format("(`jdeskucode`='%s')", (LPCTSTR)SkuCode);
+
+	// 条件 CondWarehouse
+	if (Warehouse.GetLength() > 0)
+		CondWarehouse.Format("(`jdewh`='%s')", (LPCTSTR)Warehouse);
+
+	// 准备“常量”
+	// 条件 CondTime
+	int iLeadTime = 0;
+	bRet = QueryGetLeadTime(SkuCode, Warehouse, iLeadTime);
+	if (bRet)
+	{
+		CTime OrderDate = StartingDate - CTimeSpan(iLeadTime * 7, 0, 0, 0);
+		CondTime.Format("(`jdeorderdate`>='%s' and `jdeorderdate`<='%s')",
+			ConvertDateToString(OrderDate), ConvertDateToString(StartingDate));
+	}
+
+	if (bRet)
+	{
+		// 组成完整的SQL语句
+		CString SQL;
+		SQL.Format(
+			"SELECT SUM(`jdevolume`) FROM `plannedarrival_o` WHERE %s AND %s",
+			(LPCTSTR)CondSkuCode, (LPCTSTR)CondTime);
+		if (CondWarehouse.GetLength() > 0)
+		{
+			SQL.Append(" and ");
+			SQL.Append(CondWarehouse);
+		}
+
+		// 执行SQL
+		bRet = SelectQuery(SQL);
+	}
+
+	if (bRet)
+	{
+		row = GetRecord();
+		if ( !row || !row[0] )
+			OutstandingPO = "0";
+		else
+			OutstandingPO.Format("%s", row[0]);
+	}
+
+	FreeRecord();
+
+	return bRet;
+
+}
+
+/////
+// 从数据库 warehouse_d 中查得仓库的所在地 如：TC-BD
+//     输入 
+BOOL CMPSCore::QueryGetWarehouseLocation(
+	/* IN */  const CString & Warehouse,
+	/* OUT */ CString & Location)
+{
+	CString SQL;
+	BOOL bRet = FALSE;
+	MYSQL_ROW row = NULL;
+
+	SQL.Format("SELECT `description` FROM `warehouse_d` WHERE `jdewh`='%s'",
+		(LPCTSTR)Warehouse);
+
+	bRet = SelectQuery((LPCTSTR)SQL);
+
+	if (bRet)
+	{
+		row = GetRecord();
+		if (!row || !row[0])
+			bRet = FALSE;
+	}
+
+	if (bRet)
+	{
+		Location = row[0];
+	}
+
+	FreeRecord();
+	return bRet;
+}
+
+/////
+// 从数据库表 modelengine_o 中查得leadtime
+// 如何获得LeadTime
+// 根据 Warehouse（如“MJCNN365”）查表 warehouse_d，获得仓库所在地地址
+// 然后根据所在地址和 SkuCode 到 modalengine_o 表中查找 LeadTime
+//
+BOOL CMPSCore::QueryGetLeadTime(
+	/* IN */  const CString & SkuCode,
+	/* IN */  const CString & Warehouse,
+	/* OUT */ int &iLeadTime
+	)
+{
+	CString SQL;
+	CString WarehouseLoc;
+	BOOL bRet = FALSE;
+	MYSQL_ROW row = NULL;
+
+	SQL.Format("SELECT `description` FROM `warehouse_d` WHERE `jdewh`='%s'",
+		(LPCTSTR)Warehouse);
+
+	bRet = SelectQuery((LPCTSTR)SQL);
+
+	if (bRet)
+	{
+		row = GetRecord();
+		if (!row || !row[0])
+		{
+			TRACE0("Debug: QueryGetLeadTime return FALSE\n");
+			bRet = FALSE;
+		}
+	}
+
+	if (bRet)
+	{
+		WarehouseLoc = row[0];
+		FreeRecord();
+
+		SQL.Format("SELECT `leadtime` FROM `modelengine_o` " \
+			"WHERE (`fullindex` LIKE '%%\\_%s\\_%%') AND (`jdeskucode`='%s')",
+			(LPCTSTR)WarehouseLoc, (LPCTSTR)SkuCode);
+
+		bRet = SelectQuery((LPCTSTR)SQL);
+	}
+
+	if (bRet)
+	{
+		row = GetRecord();
+		if (!row || !row[0])
+		{
+			TRACE0("Debug: QueryGetLeadTime return FALSE\n");
+			bRet = FALSE;
+		}
+	}
+
+	if (bRet)
+	{
+		iLeadTime = atoi(row[0]);
+	}
+
+	FreeRecord();
+	return bRet;
 }
 
 BOOL CMPSCore::QueryFinalResult_OutstandingPO( CTime StartingDate, CString FullIndex, CString &ResultStr )
@@ -451,28 +671,35 @@ BOOL CMPSCore::QueryFinalResult_LastWeekOrder(
 		AfxExtractSubString(strMonth, Row[0], 1, '-');
 		AfxExtractSubString(strDay,   Row[0], 2, '-');
 	
+		// 数据库中查询订单日期
 		CTime OrderDate(atoi(strYear), atoi(strMonth), atoi(strDay), 0, 0, 0);
 		debug = OrderDate.Format("%A, %B %d, %Y");
 		
+		// 加上LeadTime推算出到货日期
 		CTime ExpectedArrivalDate = OrderDate + CTimeSpan(this->m_LeadTime * 7, 0, 0, 0);
 		debug = ExpectedArrivalDate.Format("%A, %B %d, %Y");
 
+		// 顺便计算下周的到货量（本函数不需要该值）
 		CTimeSpan span = ExpectedArrivalDate - StartingDate;
 		if (span.GetDays() >= 7 && span.GetDays() < 14)
 		{
 			m_arrival += atoi(Row[1]);
 		}
 
+		// 调整到货日期（不知道为什么这么调整）
 		CTime ModifiedArrivalDate = (ExpectedArrivalDate < StartingDate)
 			? StartingDate+CTimeSpan(1,0,0,0) : ExpectedArrivalDate;
 		debug = ModifiedArrivalDate.Format("%A, %B %d, %Y");
 
+		// 根据到货日期倒回去推算订货日期（因为取整的功能，保证推算出的是星期一）
+		// 貌似，如果没有调整到货日期的话，直接对数据库查询到的订单日期取整得到那周的星期一即可。
 		CTimeSpan offset = ModifiedArrivalDate - StartingDate;
 		ULONGLONG a = offset.GetDays();
 
 		CTime ModifiedOrderDate = StartingDate - CTimeSpan((LONG)(this->m_LeadTime - offset.GetDays() / 7) * 7, 0,0,0);
 		debug = ModifiedOrderDate.Format("%A, %B %d, %Y");
 
+		// 如果推算出的订货日期是上周一，就累加那张订单的数量。
 		CTimeSpan offset2 = StartingDate - ModifiedOrderDate;
 		a = offset2.GetDays();
 
