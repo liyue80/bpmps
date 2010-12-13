@@ -671,28 +671,35 @@ BOOL CMPSCore::QueryFinalResult_LastWeekOrder(
 		AfxExtractSubString(strMonth, Row[0], 1, '-');
 		AfxExtractSubString(strDay,   Row[0], 2, '-');
 	
+		// 数据库中查询订单日期
 		CTime OrderDate(atoi(strYear), atoi(strMonth), atoi(strDay), 0, 0, 0);
 		debug = OrderDate.Format("%A, %B %d, %Y");
 		
+		// 加上LeadTime推算出到货日期
 		CTime ExpectedArrivalDate = OrderDate + CTimeSpan(this->m_LeadTime * 7, 0, 0, 0);
 		debug = ExpectedArrivalDate.Format("%A, %B %d, %Y");
 
+		// 顺便计算下周的到货量（本函数不需要该值）
 		CTimeSpan span = ExpectedArrivalDate - StartingDate;
 		if (span.GetDays() >= 7 && span.GetDays() < 14)
 		{
 			m_arrival += atoi(Row[1]);
 		}
 
+		// 调整到货日期（不知道为什么这么调整）
 		CTime ModifiedArrivalDate = (ExpectedArrivalDate < StartingDate)
 			? StartingDate+CTimeSpan(1,0,0,0) : ExpectedArrivalDate;
 		debug = ModifiedArrivalDate.Format("%A, %B %d, %Y");
 
+		// 根据到货日期倒回去推算订货日期（因为取整的功能，保证推算出的是星期一）
+		// 貌似，如果没有调整到货日期的话，直接对数据库查询到的订单日期取整得到那周的星期一即可。
 		CTimeSpan offset = ModifiedArrivalDate - StartingDate;
 		ULONGLONG a = offset.GetDays();
 
 		CTime ModifiedOrderDate = StartingDate - CTimeSpan((LONG)(this->m_LeadTime - offset.GetDays() / 7) * 7, 0,0,0);
 		debug = ModifiedOrderDate.Format("%A, %B %d, %Y");
 
+		// 如果推算出的订货日期是上周一，就累加那张订单的数量。
 		CTimeSpan offset2 = StartingDate - ModifiedOrderDate;
 		a = offset2.GetDays();
 
