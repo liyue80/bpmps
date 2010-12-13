@@ -20,7 +20,7 @@ CResultTreeview::~CResultTreeview()
 }
 
 BEGIN_MESSAGE_MAP(CResultTreeview, CColumnTreeView)
-	ON_MESSAGE(WM_USER_UI_APPEND_RECORD, &CResultTreeview::OnMessage_AppendRecord)
+	ON_MESSAGE(WM_USER_UI_APPEND_RECORD, &CResultTreeview::OnMessage_UI_APPEND_RECORD)
 END_MESSAGE_MAP()
 
 void CResultTreeview::OnInitialUpdate()
@@ -129,7 +129,7 @@ BOOL CResultTreeview::UpdateData( const CQueryFilter *pQueryFilter )
 }
 
 // WM_USER_UI_APPEND_RECORD
-LRESULT CResultTreeview::OnMessage_AppendRecord( WPARAM wParam, LPARAM lParam )
+LRESULT CResultTreeview::OnMessage_UI_APPEND_RECORD( WPARAM wParam, LPARAM lParam )
 {
 	ASSERT (lParam != NULL);
 

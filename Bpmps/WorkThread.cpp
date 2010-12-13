@@ -53,6 +53,11 @@ UINT AFX_CDECL SubWorkThreadFunc(LPVOID *lpParam)
 		bRet = Core.QueryGetOutstandingPO(CTime(pParam->_StartingDate),
 			CString(pParam->_SkuCode), CString(pParam->_WareHouse),
 			OutstandingPO);
+		if (bRet != TRUE)
+		{
+			OutstandingPO = "-";
+			bRet = TRUE;
+		}
 	}
 
 	if (bRet)
@@ -88,8 +93,29 @@ UINT AFX_CDECL MainWorkThreadFunc(LPVOID *lpParam)
 	LPMAINWORKTHREADPARAM pParam = (LPMAINWORKTHREADPARAM) lpParam;
 	CMPSCore Core;
 
+	AfxGetApp()->GetMainWnd()->PostMessageA(
+		WM_USER_UI_UPDATE_PROCESS,
+		(WPARAM) RESET_PROCESS,
+		(LPARAM) 0);
+
+	// 计数器和记录的总数，用于显示在UI上
+	UINT nCount = 0;
+	UINT nAmount = 0;
+
 	// 连接数据库
 	bRet = Core.ConnectDB("127.0.0.1", "root", "", "test", 0, NULL, 0);
+
+	// 获取记录总数，用于显示在UI上
+	if (bRet)
+	{
+		if (Core.SelectQuery("SELECT COUNT(*) FROM `skucode_t`"))
+		{
+			row = Core.GetRecord();
+			if (row != NULL && row[0] != NULL)
+				nAmount = atoi(row[0]);
+			Core.FreeRecord();
+		}
+	}
 
 	if (bRet)
 	{
@@ -104,6 +130,13 @@ UINT AFX_CDECL MainWorkThreadFunc(LPVOID *lpParam)
 		{
 			LPSUBWORKTHREADPARAM lpSubThreadParam = new SUBWORKTHREADPARAM;
 			CWinThread *pWinThread = NULL;
+
+			// 刷新UI上的进度
+			nCount++;
+			AfxGetApp()->GetMainWnd()->PostMessageA(
+				WM_USER_UI_UPDATE_PROCESS,
+				(WPARAM) UPDATE_PROCESS,
+				(LPARAM) ((nAmount << 16) | nCount));
 
 			if ( NULL == row[0] || strlen(row[0]) == 0 )
 				continue;
@@ -134,6 +167,11 @@ UINT AFX_CDECL MainWorkThreadFunc(LPVOID *lpParam)
 
 		Core.FreeRecord();
 	}
+
+	AfxGetApp()->GetMainWnd()->PostMessageA(
+		WM_USER_UI_UPDATE_PROCESS,
+		(WPARAM) END_PROCESS,
+		(LPARAM) ((nAmount << 16) | nCount));
 
 	delete pParam;
 	return 0;

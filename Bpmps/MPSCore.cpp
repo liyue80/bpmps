@@ -182,21 +182,23 @@ BOOL CMPSCore::QueryGetFirstOpenInv(
 BOOL CMPSCore::QueryFinalResult_OpenInv( CTime StartingDate, CString FullIndex, CString &ResultStr )
 {
 	CString SqlStr;
+
+	// 时间条件：StartingDate（含）之后7天内
 	CString Time1, Time2;
 	CTime   EndTime = StartingDate + CTimeSpan(7, 0, 0, 0);
-
 	Time1.Format("%d-%d-%d", StartingDate.GetYear(), StartingDate.GetMonth(), StartingDate.GetDay());
 	Time2.Format("%d-%d-%d", EndTime.GetYear(), EndTime.GetMonth(), EndTime.GetDay());
 
 	CString WarehouseDesc;
 	CString SkuIndex;
 
-	if (!AfxExtractSubString(WarehouseDesc, FullIndex, 1, '_'))
+	if (!AfxExtractSubString(WarehouseDesc, FullIndex, 1, '_')) // DL-MD
 		return FALSE;
-	if (!AfxExtractSubString(SkuIndex, FullIndex, 2, '_'))
+	if (!AfxExtractSubString(SkuIndex, FullIndex, 2, '_')) // INDEX2117
 		return FALSE;
 
 	// 仓库名
+	// 从DL-MD找到对应的仓库编号如3333851
 	MYSQL_ROW Row = NULL;
 	CArray <CString> WarehouseArray;
 	SqlStr.Format("select jdewh from warehouse_d where description='%s'", WarehouseDesc);
