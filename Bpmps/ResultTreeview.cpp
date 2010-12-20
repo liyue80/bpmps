@@ -132,26 +132,50 @@ BOOL CResultTreeview::UpdateData( const CQueryFilter *pQueryFilter )
 LRESULT CResultTreeview::OnMessage_UI_APPEND_RECORD( WPARAM wParam, LPARAM lParam )
 {
 	ASSERT (lParam != NULL);
-
 	APPENDING_RECORD * pParam = (APPENDING_RECORD *) lParam;
+	//std::map <std::string, HTREEITEM> ParentItemCache;
 
 	HTREEITEM hItem = NULL;
+	HTREEITEM hChItem = NULL;
 	CString ItemString;
 	CTreeCtrl &TreeCtrl = this->GetTreeCtrl();
+	std::string key;
 
-	if ( !m_TreeItemMap.Lookup(pParam->_SkuCode, hItem) )
+	key = pParam->_ParentSkuCode;
+
+	std::map<std::string, HTREEITEM>::iterator it = m_TreeItemMap.find(key);
+	if (it == m_TreeItemMap.end())
 	{
-		hItem = TreeCtrl.InsertItem(pParam->_SkuCode, TVI_ROOT, TVI_LAST);
+		hItem = TreeCtrl.InsertItem(pParam->_ParentSkuCode, TVI_ROOT, TVI_LAST);
+		if (hItem != NULL)
+			m_TreeItemMap.insert(std::pair<std::string,HTREEITEM>(key, hItem));
+	}
+	else
+	{
+		hItem = it->second;
 	}
 
 	if (hItem != NULL)
 	{
-		m_TreeItemMap.SetAt(pParam->_SkuCode, hItem);
-		ItemString.Format("%s\t%s\t%s",
-			pParam->_Warehouse, pParam->_OpenInvFirst, pParam->_OutstandingPO);
-		if (TreeCtrl.InsertItem((LPCTSTR)ItemString, hItem, TVI_LAST) != NULL)
+		key.append(".");
+		key.append(pParam->_SkuCode);
+		it = m_TreeItemMap.find(key);
+		if (it == m_TreeItemMap.end())
+		{
+			hChItem = TreeCtrl.InsertItem(pParam->_SkuCode, hItem, TVI_LAST);
+			m_TreeItemMap.insert(std::pair<std::string,HTREEITEM>(key, hChItem));
+		}
+		else
+		{
+			hChItem = it->second;
+		}
+
+		if (hChItem != NULL)
 		{
 			TreeCtrl.Expand(hItem, TVE_EXPAND);
+			ItemString.Format("%s\t%s\t%s",
+				pParam->_Warehouse, pParam->_OpenInvFirst, pParam->_OutstandingPO);
+			TreeCtrl.InsertItem((LPCTSTR)ItemString, hChItem, TVI_LAST);
 		}
 	}
 

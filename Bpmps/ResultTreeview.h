@@ -21,5 +21,5 @@ public:
 	BOOL UpdateData(const CQueryFilter *pQueryFilter);
 
 private:
-	CMap<CString, LPCTSTR, HTREEITEM, HTREEITEM> m_TreeItemMap;
+	std::map<std::string, HTREEITEM> m_TreeItemMap;
 };

@@ -47,6 +47,7 @@ extern CBpmpsApp theApp;
 // 自定义消息 WM_USER_UI_APPEND_RECORD 的参数 lParam
 typedef struct tagAppendingRecord
 {
+	char _ParentSkuCode[45];
 	char _SkuCode[45];
 	char _Warehouse[45];
 	char _OpenInvFirst[32];

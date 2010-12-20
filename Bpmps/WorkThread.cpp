@@ -11,6 +11,8 @@
 
 #define MAX_WORK_THREAD_COUNT 1	// TODO: 修改为用户可配置参数
 
+#define IS_EMPTY(xx) (((xx)==NULL)||(strlen(xx)==0))
+
 // 用于限制子工作线程的数量
 CSemaphore gSubThreadCount(MAX_WORK_THREAD_COUNT, MAX_WORK_THREAD_COUNT);
 
@@ -19,6 +21,7 @@ typedef struct tag_SubWorkThreadParam
 {
 	__time64_t _StartingDate;
 	__time64_t _FirstWeekSale;
+	char       _ParentSkuCode[45];
 	char       _SkuCode[45];
 	char       _WareHouse[45];
 } SUBWORKTHREADPARAM, *LPSUBWORKTHREADPARAM;
@@ -63,6 +66,7 @@ UINT AFX_CDECL SubWorkThreadFunc(LPVOID *lpParam)
 	if (bRet)
 	{
 		APPENDING_RECORD * pRecord = new APPENDING_RECORD;
+		strcpy_s(pRecord->_ParentSkuCode, pParam->_ParentSkuCode);
 		strcpy_s(pRecord->_SkuCode, pParam->_SkuCode);
 		strcpy_s(pRecord->_Warehouse, pParam->_WareHouse);
 		strcpy_s(pRecord->_OpenInvFirst, (LPCTSTR)OpenInvFirst);
@@ -98,74 +102,98 @@ UINT AFX_CDECL MainWorkThreadFunc(LPVOID *lpParam)
 		(WPARAM) RESET_PROCESS,
 		(LPARAM) 0);
 
-	// 计数器和记录的总数，用于显示在UI上
-	UINT nCount = 0;
-	UINT nAmount = 0;
-
 	// 连接数据库
 	bRet = Core.ConnectDB("127.0.0.1", "root", "", "test", 0, NULL, 0);
 
-	// 获取记录总数，用于显示在UI上
+	// 准备所有SKUCODE的集合
+	// Map key: SkuCode
+	// Map value: Sub SkuCode
+	std::multimap <std::string, std::string> SkuCodeMap;
 	if (bRet)
 	{
-		if (Core.SelectQuery("SELECT COUNT(*) FROM `skucode_t`"))
-		{
-			row = Core.GetRecord();
-			if (row != NULL && row[0] != NULL)
-				nAmount = atoi(row[0]);
-			Core.FreeRecord();
-		}
-	}
-
-	if (bRet)
-	{
-		// 查询
 		bRet = Core.SelectQuery(
-			"SELECT `skucode`,`jdewh` from `skucode_t` order by skucode");
+			"select indexcode, mapping1, mapping2, mapping3, mapping4, mapping5, mapping6, mapping7 from skuinfo");
 	}
-
 	if (bRet)
 	{
 		while (row = Core.GetRecord(), row != NULL)
 		{
-			LPSUBWORKTHREADPARAM lpSubThreadParam = new SUBWORKTHREADPARAM;
-			CWinThread *pWinThread = NULL;
+			BOOL bIncludeSelf = FALSE;
+			if (IS_EMPTY(row[0]))
+				continue;
+			for (int i=1; i<=7; i++)
+			{
+				if (IS_EMPTY(row[i]))
+					continue;
+				SkuCodeMap.insert(std::pair<std::string,std::string>(row[0],row[i]));
+				if ( strcmp(row[0], row[i]) == 0 )
+					bIncludeSelf = TRUE;
+			}
+			if (!bIncludeSelf)
+				SkuCodeMap.insert(std::pair<std::string,std::string>(row[0],row[0]));
+		}
+		Core.FreeRecord();
+	}
 
+	// 计数器和记录的总数，用于显示在UI上
+	UINT nCount = 0;
+	UINT nAmount = 0;
+	nAmount = SkuCodeMap.size();
+
+	if (bRet)
+	{
+		std::multimap<std::string,std::string>::iterator it;
+		CString SQL;
+		for ( it = SkuCodeMap.begin() ; bRet && it != SkuCodeMap.end(); it++ )
+		{
+			//////////////////////////////////////////////////////////////////////////
 			// 刷新UI上的进度
+			//////////////////////////////////////////////////////////////////////////
 			nCount++;
 			AfxGetApp()->GetMainWnd()->PostMessageA(
 				WM_USER_UI_UPDATE_PROCESS,
 				(WPARAM) UPDATE_PROCESS,
 				(LPARAM) ((nAmount << 16) | nCount));
 
-			if ( NULL == row[0] || strlen(row[0]) == 0 )
-				continue;
-
-			// 准备子工作线程的参数
-			lpSubThreadParam->_StartingDate = pParam->_StartingDate;
-			lpSubThreadParam->_FirstWeekSale = pParam->_FirstWeekSale;
-			strcpy_s(lpSubThreadParam->_SkuCode, row[0]);
-			if ( row[1] != NULL && strlen(row[1]) != 0 )
-				strcpy_s(lpSubThreadParam->_WareHouse, row[1]);
-
-			// 等待子工作线程资源（设置了同时工作的子线程数上限）
-			if (WaitForSingleObject((HANDLE)gSubThreadCount, INFINITE) != WAIT_OBJECT_0)
-			{
-				// 异常结束
-				delete lpSubThreadParam;
-				bRet = FALSE;
+			//////////////////////////////////////////////////////////////////////////
+			SQL.Format("select DISTINCT(`jdewh`) from `openinv_o` where `jdeskucode`='%s'", it->second.c_str());
+			bRet = Core.SelectQuery((LPCTSTR)SQL);
+			if ( !bRet )
 				break;
-			}
-			
-			// 启动一个子工作线程
-			pWinThread = AfxBeginThread((AFX_THREADPROC)SubWorkThreadFunc,
-				(LPVOID)lpSubThreadParam,
-				THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED);
-			pWinThread->m_bAutoDelete = TRUE;
-			pWinThread->ResumeThread();
-		}
+			while ( row = Core.GetRecord(), row != NULL)
+			{
+				if (IS_EMPTY(row[0]))
+					continue;
 
-		Core.FreeRecord();
+				// 等待子工作线程资源（设置了同时工作的子线程数上限）
+				if (WaitForSingleObject((HANDLE)gSubThreadCount, INFINITE) != WAIT_OBJECT_0)
+				{
+					// 异常结束
+					bRet = FALSE;
+					break;
+				}
+				else
+				{
+					LPSUBWORKTHREADPARAM lpSubThreadParam = new SUBWORKTHREADPARAM;
+					CWinThread *pWinThread = NULL;
+
+					// 准备子工作线程的参数
+					lpSubThreadParam->_StartingDate = pParam->_StartingDate;
+					lpSubThreadParam->_FirstWeekSale = pParam->_FirstWeekSale;
+					strcpy_s(lpSubThreadParam->_ParentSkuCode, it->first.c_str());
+					strcpy_s(lpSubThreadParam->_SkuCode, it->second.c_str());
+					strcpy_s(lpSubThreadParam->_WareHouse, row[0]);
+
+					// 启动一个子工作线程
+					pWinThread = AfxBeginThread((AFX_THREADPROC)SubWorkThreadFunc,
+						(LPVOID)lpSubThreadParam,
+						THREAD_PRIORITY_NORMAL, 0, CREATE_SUSPENDED);
+					pWinThread->m_bAutoDelete = TRUE;
+					pWinThread->ResumeThread();
+				}
+			}
+			Core.FreeRecord();
+		}
 	}
 
 	AfxGetApp()->GetMainWnd()->PostMessageA(
@@ -173,6 +201,7 @@ UINT AFX_CDECL MainWorkThreadFunc(LPVOID *lpParam)
 		(WPARAM) END_PROCESS,
 		(LPARAM) ((nAmount << 16) | nCount));
 
+	//TODO: 需等待子线程结束？
 	delete pParam;
 	return 0;
 }

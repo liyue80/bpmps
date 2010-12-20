@@ -53,13 +53,8 @@
 
 #include <WinSock.h>		// mysql.h need it
 #include <afxmt.h>
-
-
-
-
-
-
-
+#include <map>
+#include <string>
 
 #ifdef _UNICODE
 #if defined _M_IX86
