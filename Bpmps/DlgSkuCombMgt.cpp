@@ -29,6 +29,7 @@ void CDlgSkuCombMgt::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CDlgSkuCombMgt, CDialog)
 	ON_WM_CREATE()
+	ON_NOTIFY(HDN_ITEMCLICK, 0, &CDlgSkuCombMgt::OnHdnItemclickListComb)
 END_MESSAGE_MAP()
 
 
@@ -70,6 +71,7 @@ BOOL CDlgSkuCombMgt::OnInitDialog()
 	while ( (row = db.GetRecord()) != NULL )
 	{
 		int index = m_ListCtrl.InsertItem( m_ListCtrl.GetItemCount(), row[0] );
+		m_ListCtrl.SetItemData(index, atoi(row[0]));
 		for (int i = 0; i < 7; i++)
 		{
 			if (row[i+2] != 0)
@@ -81,3 +83,75 @@ BOOL CDlgSkuCombMgt::OnInitDialog()
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
 
+struct _tagListViewSortFuncParam
+{
+	CListCtrl *pListCtrl;
+	BOOL bDesc;	// ÄæÐò£¿
+};
+
+static int CALLBACK ListViewSortFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
+{
+	LVITEM *pItemFirst = (LVITEM *)lParam1;
+	LVITEM *pItemSecond = (LVITEM *)lParam2;
+	_tagListViewSortFuncParam * pParamSort
+		= (_tagListViewSortFuncParam *) lParamSort;
+
+	if (lParam1 == lParam2)
+		return 0;
+
+	if (pParamSort->bDesc)
+	{
+		if (lParam1 > lParam2)
+			return 1;
+		else
+			return -1;
+	}
+	else
+	{
+		if (lParam1 > lParam2)
+			return -1;
+		else
+			return 1;
+	}
+}
+
+void CDlgSkuCombMgt::OnHdnItemclickListComb(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMHEADER phdr = reinterpret_cast<LPNMHEADER>(pNMHDR);
+	_tagListViewSortFuncParam ParamSort = {0};
+
+	if (phdr->iItem != 0)
+		return;
+
+	//////////////////////////////////////////////////////////////////////////
+	// Ë³Ðò ÄæÐò
+	LONG UserData = GetWindowLong(m_ListCtrl.GetSafeHwnd(), GWL_USERDATA);
+
+	switch (UserData & 0x03)
+	{
+	case 0x00:
+		ParamSort.bDesc = FALSE;
+		UserData |= 0x02;
+		break;
+	case 0x01:
+		ASSERT(FALSE);
+		break;
+	case 0x02:
+		ParamSort.bDesc = TRUE;
+		UserData |= 0x03;
+		break;
+	case 0x03:
+		ParamSort.bDesc = FALSE;
+		UserData &= ~0x01;
+		break;
+	default:
+		ASSERT(FALSE);
+	}
+
+	SetWindowLong(m_ListCtrl.GetSafeHwnd(), GWL_USERDATA, UserData);
+
+	//////////////////////////////////////////////////////////////////////////
+	ParamSort.pListCtrl = &m_ListCtrl;
+	m_ListCtrl.SortItems(ListViewSortFunc, (LPARAM)&ParamSort);
+	*pResult = 0;
+}

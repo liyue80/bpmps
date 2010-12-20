@@ -27,4 +27,6 @@ public:
 
 private:
 	CListCtrl m_ListCtrl;
+public:
+	afx_msg void OnHdnItemclickListComb(NMHDR *pNMHDR, LRESULT *pResult);
 };
