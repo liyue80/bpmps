@@ -51,7 +51,6 @@ protected:
 	afx_msg LRESULT OnMessage_UI_UPDATE_PROCESS(WPARAM wParam, LPARAM lParam);
 	DECLARE_MESSAGE_MAP()
 private:
-	CDlgFilterPanel m_DlgFilterPanel;
 	CDlgSkuGroupMgt m_DlgSkuGroupMgt;
 
 public:
@@ -63,4 +62,5 @@ protected:
 public:
 	afx_msg void OnConnect();
 	afx_msg void OnDataSkucombinationmanagement();
+	afx_msg void OnFileNew();
 };

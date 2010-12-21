@@ -27,6 +27,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_COMMAND(ID_DATA_SKUCOMBINATIONMANAGEMENT, &CMainFrame::OnDataSkucombinationmanagement)
 	ON_MESSAGE(WM_USER_UI_APPEND_RECORD, &CMainFrame::OnMessage_UI_APPEND_RECORD)
 	ON_MESSAGE(WM_USER_UI_UPDATE_PROCESS, &CMainFrame::OnMessage_UI_UPDATE_PROCESS)
+	ON_COMMAND(ID_FILE_NEW, &CMainFrame::OnFileNew)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -77,15 +78,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create status bar\n");
 		return -1;      // fail to create
 	}
-
-	if (!m_DlgFilterPanel.Create(IDD_FILTER_PANEL, this))
-	{
-		TRACE0("Failed to create filter panel\n");
-		return -1;		// fail to create
-	}
-
-	m_DlgFilterPanel.ResetDimension();
-	m_DlgFilterPanel.ShowWindow(SW_SHOW);
 
 	if (!m_DlgSkuGroupMgt.Create(IDD_SKU_GROUP_MGT, this))
 	{
@@ -204,7 +196,6 @@ void CMainFrame::HideAllPanelExclude(const CDialog * pDlgExclude)
 
 	// add more dialogs here
 	DialogArray.Add(&this->m_DlgSkuGroupMgt);
-	DialogArray.Add(&this->m_DlgFilterPanel);
 
 	ArraySize = DialogArray.GetCount();
 
@@ -267,7 +258,6 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 	{
 	case RESET_PROCESS:
 		{
-			m_DlgFilterPanel.EnableWindow(FALSE);
 		}
 		break;
 	case UPDATE_PROCESS:
@@ -282,7 +272,6 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 			CString StateBarText;
 			StateBarText.Format("Done %u/%u", nCount, nAmount);
 			m_wndStatusBar.SetPaneText(0, (LPCTSTR)StateBarText);
-			m_DlgFilterPanel.EnableWindow(TRUE);
 		}
 		break;
 	default:
@@ -290,4 +279,12 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 	}
 
 	return 0;
+}
+
+
+void CMainFrame::OnFileNew()
+{
+	// TODO: 在此添加命令处理程序代码
+	CDlgFilterPanel Dlg;
+	Dlg.DoModal();
 }

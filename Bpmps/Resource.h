@@ -9,10 +9,12 @@
 #define IDR_MAINFRAME                   128
 #define IDR_BpmpsTYPE                   129
 #define IDD_FILTER_PANEL                130
+#define IDD_PANEL_NEW                   130
 #define IDD_OPTIONS                     131
 #define IDD_SKU_GROUP_MGT               132
 #define IDD_SKU_COMB_MGT                134
 #define IDD_INPUT_NAME                  135
+#define IDD_DIALOG1                     136
 #define ID_START_QUERY                  1000
 #define IDC_COMBO1                      1003
 #define IDC_COMBO2                      1004
@@ -37,7 +39,6 @@
 #define IDC_EDIT_NAME                   1023
 #define IDC_DATETIMEPICKER2             1026
 #define IDC_BUTTON2                     1027
-#define IDC_LIST1                       1028
 #define IDC_LIST_COMB                   1028
 #define ID_EDIT_CONFIGURATION           32771
 #define ID_EDIT_SETTING                 32772
@@ -49,13 +50,15 @@
 #define ID_FILE_DISCONNECT              32778
 #define ID_DISCONNECT                   32779
 #define ID_DATA_SKUCOMBINATIONMANAGEMENT 32780
+#define ID_CONFIGURATION_STARTINGDATE   32781
+#define ID_FILE_NEW32782                32782
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        136
-#define _APS_NEXT_COMMAND_VALUE         32781
+#define _APS_NEXT_RESOURCE_VALUE        137
+#define _APS_NEXT_COMMAND_VALUE         32783
 #define _APS_NEXT_CONTROL_VALUE         1029
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
