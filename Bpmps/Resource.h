@@ -9,7 +9,6 @@
 #define IDR_MAINFRAME                   128
 #define IDR_BpmpsTYPE                   129
 #define IDD_FILTER_PANEL                130
-#define IDD_PANEL_NEW                   130
 #define IDD_OPTIONS                     131
 #define IDD_SKU_GROUP_MGT               132
 #define IDD_SKU_COMB_MGT                134
@@ -38,7 +37,6 @@
 #define IDC_SKUCD_DELETE                1022
 #define IDC_EDIT_NAME                   1023
 #define IDC_DATETIMEPICKER2             1026
-#define IDC_BUTTON2                     1027
 #define IDC_LIST_COMB                   1028
 #define ID_EDIT_CONFIGURATION           32771
 #define ID_EDIT_SETTING                 32772
@@ -52,13 +50,22 @@
 #define ID_DATA_SKUCOMBINATIONMANAGEMENT 32780
 #define ID_CONFIGURATION_STARTINGDATE   32781
 #define ID_FILE_NEW32782                32782
+#define ID_FILE_LOAD                    32784
+#define ID_NEXT_WEEK                    32785
+#define ID_PREV_WEEK                    32786
+#define ID_GO_WEEK                      32787
+#define ID_FILE_LOAD32788               32788
+#define ID_DATA_NEXTWEEK                32789
+#define ID_DATA_PREVIOUSWEEK            32790
+#define ID_DATA_GOTOWEEK                32791
+#define ID_GOTO_WEEK                    32792
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        137
-#define _APS_NEXT_COMMAND_VALUE         32783
+#define _APS_NEXT_COMMAND_VALUE         32793
 #define _APS_NEXT_CONTROL_VALUE         1029
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

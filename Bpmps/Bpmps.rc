@@ -76,8 +76,15 @@ IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
 // Toolbar
 //
 
-IDR_MAINFRAME TOOLBAR 16, 15
+IDR_MAINFRAME TOOLBAR 16, 16
 BEGIN
+    BUTTON      ID_FILE_NEW
+    BUTTON      ID_FILE_LOAD
+    SEPARATOR
+    BUTTON      ID_PREV_WEEK
+    BUTTON      ID_NEXT_WEEK
+    BUTTON      ID_GOTO_WEEK
+    SEPARATOR
     BUTTON      ID_EDIT_CUT
     BUTTON      ID_EDIT_COPY
     BUTTON      ID_EDIT_PASTE
@@ -96,9 +103,10 @@ BEGIN
     POPUP "&File"
     BEGIN
         MENUITEM "New ...",                     ID_FILE_NEW
+        MENUITEM "Load ...",                    ID_FILE_LOAD
+        MENUITEM SEPARATOR
         MENUITEM "Connect",                     ID_CONNECT
         MENUITEM "Disconnect",                  ID_DISCONNECT
-        MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_APP_EXIT
     END
     POPUP "&Edit"
@@ -124,6 +132,9 @@ BEGIN
     BEGIN
         MENUITEM "SKU List",                    ID_DATA_SKULIST
         MENUITEM "SKU Combination Management",  ID_DATA_SKUCOMBINATIONMANAGEMENT
+        MENUITEM "Next Week",                   ID_NEXT_WEEK
+        MENUITEM "Previous Week",               ID_PREV_WEEK
+        MENUITEM "Goto Week ...",               ID_GOTO_WEEK
     END
 END
 

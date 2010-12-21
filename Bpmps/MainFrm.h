@@ -63,4 +63,8 @@ public:
 	afx_msg void OnConnect();
 	afx_msg void OnDataSkucombinationmanagement();
 	afx_msg void OnFileNew();
+	afx_msg void OnFileLoad();
+	afx_msg void OnNextWeek();
+	afx_msg void OnPrevWeek();
+	afx_msg void OnGotoWeek();
 };

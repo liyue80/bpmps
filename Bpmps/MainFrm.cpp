@@ -28,6 +28,10 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_MESSAGE(WM_USER_UI_APPEND_RECORD, &CMainFrame::OnMessage_UI_APPEND_RECORD)
 	ON_MESSAGE(WM_USER_UI_UPDATE_PROCESS, &CMainFrame::OnMessage_UI_UPDATE_PROCESS)
 	ON_COMMAND(ID_FILE_NEW, &CMainFrame::OnFileNew)
+	ON_COMMAND(ID_FILE_LOAD, &CMainFrame::OnFileLoad)
+	ON_COMMAND(ID_NEXT_WEEK, &CMainFrame::OnNextWeek)
+	ON_COMMAND(ID_PREV_WEEK, &CMainFrame::OnPrevWeek)
+	ON_COMMAND(ID_GOTO_WEEK, &CMainFrame::OnGotoWeek)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -287,4 +291,28 @@ void CMainFrame::OnFileNew()
 	// TODO: 在此添加命令处理程序代码
 	CDlgFilterPanel Dlg;
 	Dlg.DoModal();
+}
+
+
+void CMainFrame::OnFileLoad()
+{
+	// TODO: 在此添加命令处理程序代码
+}
+
+
+void CMainFrame::OnNextWeek()
+{
+	// TODO: 在此添加命令处理程序代码
+}
+
+
+void CMainFrame::OnPrevWeek()
+{
+	// TODO: 在此添加命令处理程序代码
+}
+
+
+void CMainFrame::OnGotoWeek()
+{
+	// TODO: 在此添加命令处理程序代码
 }
