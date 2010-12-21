@@ -6,6 +6,7 @@
 #define IDP_OLE_INIT_FAILED             100
 #define ID_RESULT_VIEW                  101
 #define ID_SKULIST_VIEW                 102
+#define ID_INDICATOR_EXPAND             103
 #define IDR_MAINFRAME                   128
 #define IDR_BpmpsTYPE                   129
 #define IDD_FILTER_PANEL                130

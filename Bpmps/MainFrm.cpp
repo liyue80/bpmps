@@ -37,6 +37,7 @@ END_MESSAGE_MAP()
 static UINT indicators[] =
 {
 	ID_SEPARATOR,           // status line indicator
+	ID_INDICATOR_EXPAND,
 	ID_INDICATOR_CAPS,
 	ID_INDICATOR_NUM,
 	ID_INDICATOR_SCRL,
@@ -82,6 +83,18 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create status bar\n");
 		return -1;      // fail to create
 	}
+
+	// Adjust status bar
+	UINT nID = 0;
+	UINT nStyle = 0;
+	int  cxWidth = 0;
+	m_wndStatusBar.GetPaneInfo(0, nID, nStyle, cxWidth);
+	nStyle &= ~SBPS_STRETCH;
+	m_wndStatusBar.SetPaneInfo(0, nID, nStyle, 320);
+	m_wndStatusBar.GetPaneInfo(1, nID, nStyle, cxWidth);
+	nStyle |= SBPS_STRETCH;
+	m_wndStatusBar.SetPaneInfo(1, nID, nStyle, cxWidth);
+	//m_wndStatusBar.SetPaneText(1, "");
 
 	if (!m_DlgSkuGroupMgt.Create(IDD_SKU_GROUP_MGT, this))
 	{
@@ -315,4 +328,5 @@ void CMainFrame::OnPrevWeek()
 void CMainFrame::OnGotoWeek()
 {
 	// TODO: 在此添加命令处理程序代码
+	m_wndStatusBar.SetPaneText(ID_SEPARATOR, "Ready!\tDate:2010-10-12");
 }
