@@ -297,6 +297,7 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 					m_pDlgProgressing->ShowWindow(SW_SHOW);
 				}
 			}
+			LockWindowUpdate();
 			this->EnableWindow(FALSE);
 		}
 		break;
@@ -320,6 +321,7 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 
 			// 新的仿模态进度条对话框
 			this->EnableWindow();
+			UnlockWindowUpdate();
 			m_pDlgProgressing->DestroyWindow();
 			delete m_pDlgProgressing;
 			m_pDlgProgressing = NULL;
