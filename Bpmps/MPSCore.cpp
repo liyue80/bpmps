@@ -11,6 +11,85 @@ CMPSCore::~CMPSCore(void)
 {
 }
 
+//
+// 根据时间，产生一个保存计算结果的表名。
+// TODO: 待测试
+//
+void CMPSCore::GenerateTableName(/* IN */__time64_t StartingDate,
+	/* IN */__time64_t SaleWk1, /* OUT */CString &TableName)
+{
+	CTime t1(StartingDate);
+	CTime t2(SaleWk1);
+
+	TableName.Format("rt%04d%02d%02dx%04d%02d%02d",
+		t1.GetYear(), t1.GetMonth(), t1.GetDay(),
+		t2.GetYear(), t2.GetMonth(), t2.GetDay());
+}
+
+//
+// 实现与函数GenerateTableName相反的功能
+// 如果输入的表名不符合定义的格式导致无法解析时，返回FALSE
+// TODO: 待测试
+//
+BOOL CMPSCore::DecodeTableName(/* IN */const CString &TableName,
+	/* OUT */CTime &StartingDate, /* OUT */CTime &SaleWk1)
+{
+	// 检查表名中固定位置的字符
+	if ( TableName.Mid(0, 2).CompareNoCase("rt") != 0 )
+		return FALSE;
+	if ( TableName.Mid(10, 1).CompareNoCase("x") != 0 )
+		return FALSE;
+
+	try
+	{
+		int year = atoi((LPCTSTR)TableName.Mid(2, 4));
+		int month = atoi((LPCTSTR)TableName.Mid(6, 2));
+		int day = atoi((LPCTSTR)TableName.Mid(8, 2));
+		StartingDate = CTime(year, month, day, 0, 0, 0);
+
+		year = atoi((LPCTSTR)TableName.Mid(11, 4));
+		month = atoi((LPCTSTR)TableName.Mid(15, 2));
+		day = atoi((LPCTSTR)TableName.Mid(17, 2));
+		SaleWk1 = CTime(year, month, day, 0, 0, 0);
+	}
+	catch (CException* )
+	{
+		//构造CTime时发生异常，说明表名中出现错误字符
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+//
+// 从数据库中搜索所有保存计算结果的表，返回表名
+// TODO: 待测试
+//
+BOOL CMPSCore::GetAllSavedTable(/* OUT */CArray<CString> &TablesName)
+{
+	BOOL nRet = FALSE;
+	MYSQL_ROW row = NULL;
+	CString TableName;
+	CTime TmpTime1, TmpTime2;
+
+	nRet = SelectQuery("SHOW TABLES");
+
+	if (nRet)
+	{
+		TablesName.RemoveAll();
+		while (row = GetRecord(), row != NULL)
+		{
+			if (IS_EMPTY(row[0]))
+				continue;
+			TableName = (const char *)row[0];
+			if (DecodeTableName(TableName, TmpTime1, TmpTime2))
+				TablesName.Add(TableName);
+		}
+		FreeRecord();
+	}
+
+	return TRUE;
+}
 
 #if 0
 BOOL CMPSCore::QueryTest(const CQueryFilter * pQueryFilter)
@@ -1175,3 +1254,84 @@ double CMPSCore::GetDailyForecast(const CTime &date, const CString &FullIndex)
 	return value;
 }
 
+//
+// 向保存计算结果的表中添加一条记录
+// TODO:待测试
+//
+BOOL CMPSCore::StoreOneResult( __time64_t StartingDate,
+	__time64_t FirstWeekSale, const CString &ParentSkuCode,
+	const CString &SkuCode, const CString &WareHouse,
+	UINT WeekOffset, const CString &OpenInvFirst,
+	const CString &OutstandingPO, const CString &LTForecast,
+	const CString &SaleVsForecast, const CString &RecommendVolume,
+	const CString &ActionFlag, const CString &LastWeekOrder,
+	const CString &RecommendVolumeWithoutLastWeekOrder,
+	const CString &ProductionTag, const CString &Arrival,
+	const CString &Sales )
+{
+	BOOL bRet = FALSE;
+	CString TableName;
+	CString SQL;
+
+	GenerateTableName(StartingDate, FirstWeekSale, TableName);
+	ASSERT(TableName.GetLength() > 0);
+
+	SQL.Format("insert into `%s`(`week`,`pskucode`,`skucode`,`skuwh`,"
+		"`openinv`,`outstandingpo`,`ltforecast`,`salevsforecast`,"
+		"`recommend`,`actionflag`,`laskweekorder`,`recommendwithoutorder`,"
+		"`productiontag`,`arrival`,`sales`) values (%u,'%s','%s','%s','%s',"
+		"'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')",
+		(LPCTSTR)TableName, WeekOffset, (LPCTSTR)ParentSkuCode, (LPCTSTR)SkuCode,
+		(LPCTSTR)WareHouse, (LPCTSTR)OpenInvFirst, (LPCTSTR)OutstandingPO,
+		(LPCTSTR)LTForecast, (LPCTSTR)SaleVsForecast, (LPCTSTR)RecommendVolume,
+		(LPCTSTR)ActionFlag, (LPCTSTR)LastWeekOrder,
+		(LPCTSTR)RecommendVolumeWithoutLastWeekOrder,
+		(LPCTSTR)ProductionTag, (LPCTSTR)Arrival, (LPCTSTR)Sales);
+
+	bRet = NonSelectQuery(SQL);
+
+	// 如果是因为表不存在的错误，那么创建表后再INSERT一次
+	if (!bRet && (OutErrno() == 1146 /*ER_NO_SUCH_TABLE*/))
+	{
+		bRet = CreateResultTable(TableName);
+		if (bRet)
+			bRet = NonSelectQuery(SQL);
+		else
+		{
+		}
+	}
+	else
+	{
+	}
+
+	return bRet;
+}
+
+//
+// 创建一张保存计算结果的表
+// TODO:待测试
+//
+BOOL CMPSCore::CreateResultTable(const CString &TableName)
+{
+	CString SQL;
+	SQL.Format("CREATE  TABLE `%s` ("
+		"`pkid` INT NOT NULL AUTO_INCREMENT ,"
+		"`week` INT NULL ,"
+		"`pskucode` VARCHAR(45) NULL COMMENT 'Parent SKU code' ,"
+		"`skucode` VARCHAR(45) NULL ,"
+		"`skuwh` VARCHAR(45) NULL ,"
+		"`openinv` VARCHAR(45) NULL ,"
+		"`outstandingpo` VARCHAR(45) NULL ,"
+		"`ltforecast` VARCHAR(45) NULL ,"
+		"`salevsforecast` VARCHAR(45) NULL ,"
+		"`recommend` VARCHAR(45) NULL ,"
+		"`actionflag` VARCHAR(45) NULL ,"
+		"`laskweekorder` VARCHAR(45) NULL ,"
+		"`recommendwithoutorder` VARCHAR(45) NULL ,"
+		"`productiontag` VARCHAR(45) NULL ,"
+		"`arrival` VARCHAR(45) NULL ,"
+		"`sales` VARCHAR(45) NULL ,"
+		"PRIMARY KEY (`pkid`) )", (LPCTSTR)TableName);
+
+	return NonSelectQuery(SQL);
+}

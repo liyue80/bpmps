@@ -64,6 +64,17 @@ public:
 		const CString &CbName, const CString &SkuCode, CString *pErrStr
 		);
 
+	BOOL StoreOneResult(__time64_t StartingDate, __time64_t FirstWeekSale,
+		const CString &ParentSkuCode, const CString &SkuCode,
+		const CString &WareHouse, UINT WeekOffset, 
+		const CString &OpenInvFirst, const CString &OutstandingPO,
+		const CString &LTForecast, const CString &SaleVsForecast,
+		const CString &RecommendVolume, const CString &ActionFlag,
+		const CString &LastWeekOrder,
+		const CString &RecommendVolumeWithoutLastWeekOrder,
+		const CString &ProductionTag, 
+		const CString &Arrival, const CString &Sales);
+
 protected:
 	BOOL QueryFinalResult_OpenInv(
 		CTime StartingDate, CString FullIndex, CString &ResultStr
@@ -174,6 +185,17 @@ public: // TODO: change to protected functions
 	BOOL QueryGetOutstandingPO( /* IN */ const CTime & StartingDate,
 		/* IN */ const CString & SkuCode, /* IN */ const CString & Warehouse,
 		/* OUT */ CString & OutstandingPO);
+
+	static void GenerateTableName(/* IN */__time64_t StartingDate,
+		/* IN */__time64_t SaleWk1, /* OUT */CString &TableName);
+
+	static BOOL DecodeTableName(/* IN */const CString &TableName,
+		/* OUT */CTime &StartingDate, /* OUT */CTime &SaleWk1);
+
+	BOOL GetAllSavedTable(/* OUT */CArray<CString> &TablesName);
+
+	BOOL CreateResultTable(const CString &TableName);
+
 private:
 
 	CQueryFilter m_QueryFilter;

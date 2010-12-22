@@ -11,7 +11,6 @@
 
 #define MAX_WORK_THREAD_COUNT 1	// TODO: 修改为用户可配置参数
 
-#define IS_EMPTY(xx) (((xx)==NULL)||(strlen(xx)==0))
 
 // 用于限制子工作线程的数量
 CSemaphore gSubThreadCount(MAX_WORK_THREAD_COUNT, MAX_WORK_THREAD_COUNT);
@@ -36,8 +35,20 @@ UINT AFX_CDECL SubWorkThreadFunc(LPVOID *lpParam)
 	CMPSCore Core;
 	BOOL bRet = FALSE;
 	LPSUBWORKTHREADPARAM pParam = (LPSUBWORKTHREADPARAM) lpParam;
+	UINT WeekOffset = 0;	//StartingDate之后的N周，从0开始表示StartingDate那周。
+
+	// 下述11项为计算结果
 	CString OpenInvFirst;
 	CString OutstandingPO;
+	CString LTForecast;
+	CString SaleVsForecast;
+	CString RecommendVolume;
+	CString ActionFlag;
+	CString LastWeekOrder;
+	CString RecommendVolumeWithoutLastWeekOrder;
+	CString ProductionTag;
+	CString Arrival;
+	CString Sales;
 
 	TRACE1("SubWorkThreadFunc begin - %s\n", pParam->_SkuCode);
 
@@ -74,6 +85,14 @@ UINT AFX_CDECL SubWorkThreadFunc(LPVOID *lpParam)
 
 		AfxGetApp()->GetMainWnd()->SendMessage(
 			WM_USER_UI_APPEND_RECORD, (WPARAM)0, (LPARAM)(LPVOID)pRecord);
+
+		// 保存一个SKU的11个结果
+		// TODO: 处理返回FALSE时
+		Core.StoreOneResult(pParam->_StartingDate, pParam->_FirstWeekSale,
+			pParam->_ParentSkuCode, pParam->_SkuCode, pParam->_WareHouse,
+			WeekOffset, OpenInvFirst, OutstandingPO, LTForecast,
+			SaleVsForecast, RecommendVolume, ActionFlag, LastWeekOrder,
+			RecommendVolumeWithoutLastWeekOrder, ProductionTag, Arrival, Sales);
 	}
 
 	// 结束时释放一个子线程
@@ -104,6 +123,15 @@ UINT AFX_CDECL MainWorkThreadFunc(LPVOID *lpParam)
 
 	// 连接数据库
 	bRet = Core.ConnectDB("127.0.0.1", "root", "", "test", 0, NULL, 0);
+
+	// 子进程会添加记录到数据库中，应在此先清空该表
+	if (bRet)
+	{
+		CString SQL, TableName;
+		CMPSCore::GenerateTableName(pParam->_StartingDate, pParam->_FirstWeekSale, TableName);
+		SQL.Format("TRUNCATE TABLE `%s`", (LPCTSTR)TableName);
+		bRet = Core.NonSelectQuery(SQL);
+	}
 
 	// 准备所有SKUCODE的集合
 	// Map key: SkuCode

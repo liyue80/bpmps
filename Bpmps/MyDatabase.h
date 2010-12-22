@@ -2,6 +2,8 @@
 
 #include "../mysql/include/mysql.h"
 
+#define IS_EMPTY(xx) (((xx)==NULL)||(strlen(xx)==0))
+
 class CMyDatabase
 {
 public:
@@ -54,7 +56,10 @@ public:
 	{
 		return mysql_error(&this->m_mysql);
 	};
-
+	inline int OutErrno(void) // return error number
+	{
+		return mysql_errno(&this->m_mysql);
+	};
 	my_ulonglong GetAffectedRow();
 
 protected:
