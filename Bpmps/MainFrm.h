@@ -8,6 +8,7 @@
 #include "DlgFilterPanel.h"
 #include "DlgSkuGroupMgt.h"
 #include "MPSCore.h"
+#include "DlgProgressing.h"
 
 class CMainFrame : public CFrameWnd
 {
@@ -52,6 +53,7 @@ protected:
 	DECLARE_MESSAGE_MAP()
 private:
 	CDlgSkuGroupMgt m_DlgSkuGroupMgt;
+	CDlgProgressing *m_pDlgProgressing;
 
 public:
 	afx_msg void OnClickMenuEditOptions();

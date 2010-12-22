@@ -55,6 +55,7 @@
 #include <afxmt.h>
 #include <map>
 #include <string>
+#include <afxcontrolbars.h>
 
 #ifdef _UNICODE
 #if defined _M_IX86

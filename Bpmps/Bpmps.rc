@@ -247,6 +247,15 @@ BEGIN
     PUSHBUTTON      "取消",IDCANCEL,259,162,50,14
 END
 
+IDD_PROGRESSING DIALOGEX 0, 0, 316, 183
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "确定",IDOK,205,162,50,14
+    PUSHBUTTON      "取消",IDCANCEL,259,162,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -344,6 +353,14 @@ BEGIN
     END
 
     IDD_DIALOG1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 309
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 176
+    END
+
+    IDD_PROGRESSING, DIALOG
     BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 309

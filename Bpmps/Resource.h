@@ -15,6 +15,8 @@
 #define IDD_SKU_COMB_MGT                134
 #define IDD_INPUT_NAME                  135
 #define IDD_DIALOG1                     136
+#define IDD_DIALOG2                     137
+#define IDD_PROGRESSING                 137
 #define ID_START_QUERY                  1000
 #define IDC_COMBO1                      1003
 #define IDC_COMBO2                      1004
@@ -65,7 +67,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        137
+#define _APS_NEXT_RESOURCE_VALUE        138
 #define _APS_NEXT_COMMAND_VALUE         32793
 #define _APS_NEXT_CONTROL_VALUE         1029
 #define _APS_NEXT_SYMED_VALUE           101

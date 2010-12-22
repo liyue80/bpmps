@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -129,6 +129,7 @@
     <ClCompile Include="DlgFilterPanel.cpp" />
     <ClCompile Include="DlgInputName.cpp" />
     <ClCompile Include="DlgOptions.cpp" />
+    <ClCompile Include="DlgProgressing.cpp" />
     <ClCompile Include="DlgSkuCombMgt.cpp" />
     <ClCompile Include="DlgSkuGroupMgt.cpp" />
     <ClCompile Include="MainFrm.cpp" />
@@ -150,6 +151,7 @@
     <ClInclude Include="DlgFilterPanel.h" />
     <ClInclude Include="DlgInputName.h" />
     <ClInclude Include="DlgOptions.h" />
+    <ClInclude Include="DlgProgressing.h" />
     <ClInclude Include="DlgSkuCombMgt.h" />
     <ClInclude Include="DlgSkuGroupMgt.h" />
     <ClInclude Include="MainFrm.h" />

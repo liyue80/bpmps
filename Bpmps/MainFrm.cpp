@@ -47,6 +47,7 @@ static UINT indicators[] =
 // CMainFrame construction/destruction
 
 CMainFrame::CMainFrame()
+	: m_pDlgProgressing(NULL)
 {
 	// TODO: add member initialization code here
 }
@@ -275,6 +276,28 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 	{
 	case RESET_PROCESS:
 		{
+			// 新的仿模态进度条对话框
+			RECT WinRC = {0};
+			RECT DlgRC = {0};
+			if (!m_pDlgProgressing)
+				m_pDlgProgressing = new CDlgProgressing;
+			if (m_pDlgProgressing)
+			{
+				if (m_pDlgProgressing->Create(IDD_PROGRESSING, NULL))
+				{
+					this->GetWindowRect(&WinRC);
+					this->ClientToScreen(&WinRC);
+					m_pDlgProgressing->GetWindowRect(&DlgRC);
+					DlgRC.left = (WinRC.right + WinRC.left) / 2
+						- (DlgRC.right - DlgRC.left) / 2;
+					DlgRC.top  = (WinRC.bottom + WinRC.top) / 2
+						- (DlgRC.bottom - DlgRC.top) / 2;
+					m_pDlgProgressing->SetWindowPos(NULL, DlgRC.left, DlgRC.top,
+						0, 0, SWP_NOZORDER|SWP_NOREDRAW|SWP_NOSIZE);
+					m_pDlgProgressing->ShowWindow(SW_SHOW);
+				}
+			}
+			this->EnableWindow(FALSE);
 		}
 		break;
 	case UPDATE_PROCESS:
@@ -289,6 +312,12 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 			CString StateBarText;
 			StateBarText.Format("Done %u/%u", nCount, nAmount);
 			m_wndStatusBar.SetPaneText(0, (LPCTSTR)StateBarText);
+
+			// 新的仿模态进度条对话框
+			this->EnableWindow();
+			m_pDlgProgressing->DestroyWindow();
+			delete m_pDlgProgressing;
+			m_pDlgProgressing = NULL;
 		}
 		break;
 	default:
