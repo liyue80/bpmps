@@ -305,6 +305,11 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 			CString StateBarText;
 			StateBarText.Format("%u/%u", nCount, nAmount);
 			m_wndStatusBar.SetPaneText(0, (LPCTSTR)StateBarText);
+
+			// 新的仿模态进度条对话框
+			ASSERT(m_pDlgProgressing != NULL);
+			m_pDlgProgressing->SetRange(nAmount);
+			m_pDlgProgressing->SetProgress(nCount);
 		}
 		break;
 	case END_PROCESS:

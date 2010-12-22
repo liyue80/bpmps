@@ -183,11 +183,6 @@ UINT AFX_CDECL MainWorkThreadFunc(LPVOID *lpParam)
 				(WPARAM) UPDATE_PROCESS,
 				(LPARAM) ((nAmount << 16) | nCount));
 
-#ifdef _DEBUG
-			if (nCount > 50)
-				break;
-#endif
-
 			//////////////////////////////////////////////////////////////////////////
 			SQL.Format("select DISTINCT(`jdewh`) from `openinv_o` where `jdeskucode`='%s'", it->second.c_str());
 			bRet = Core.SelectQuery((LPCTSTR)SQL);
@@ -195,6 +190,11 @@ UINT AFX_CDECL MainWorkThreadFunc(LPVOID *lpParam)
 				break;
 			while ( row = Core.GetRecord(), row != NULL)
 			{
+#ifdef _DEBUG
+				if (nCount > 50)
+					break;
+#endif
+
 				if (IS_EMPTY(row[0]))
 					continue;
 
