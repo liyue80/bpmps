@@ -128,6 +128,7 @@
     <ClCompile Include="ColumnTreeView.cpp" />
     <ClCompile Include="DlgFilterPanel.cpp" />
     <ClCompile Include="DlgInputName.cpp" />
+    <ClCompile Include="DlgLoad.cpp" />
     <ClCompile Include="DlgOptions.cpp" />
     <ClCompile Include="DlgProgressing.cpp" />
     <ClCompile Include="DlgSkuCombMgt.cpp" />
@@ -150,6 +151,7 @@
     <ClInclude Include="ColumnTreeView.h" />
     <ClInclude Include="DlgFilterPanel.h" />
     <ClInclude Include="DlgInputName.h" />
+    <ClInclude Include="DlgLoad.h" />
     <ClInclude Include="DlgOptions.h" />
     <ClInclude Include="DlgProgressing.h" />
     <ClInclude Include="DlgSkuCombMgt.h" />

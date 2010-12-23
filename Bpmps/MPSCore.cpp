@@ -63,6 +63,7 @@ BOOL CMPSCore::DecodeTableName(/* IN */const CString &TableName,
 
 //
 // 从数据库中搜索所有保存计算结果的表，返回表名
+// 注，只返回命名符合规则的表名
 // TODO: 待测试
 //
 BOOL CMPSCore::GetAllSavedTable(/* OUT */CArray<CString> &TablesName)

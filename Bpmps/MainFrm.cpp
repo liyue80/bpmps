@@ -7,6 +7,7 @@
 #include "MainFrm.h"
 #include "DlgOptions.h"
 #include "DlgSkuCombMgt.h"
+#include "DlgLoad.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -297,7 +298,8 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 					m_pDlgProgressing->ShowWindow(SW_SHOW);
 				}
 			}
-			LockWindowUpdate();
+			//LockWindowUpdate(); //TODO: ALT-TAB切换后会失效，需用更好的办法解决
+			m_wndView.GetResultView()->SetRedraw(FALSE);
 			this->EnableWindow(FALSE);
 		}
 		break;
@@ -321,7 +323,9 @@ LRESULT CMainFrame::OnMessage_UI_UPDATE_PROCESS( WPARAM wParam, LPARAM lParam )
 
 			// 新的仿模态进度条对话框
 			this->EnableWindow();
-			UnlockWindowUpdate();
+			//UnlockWindowUpdate();
+			m_wndView.GetResultView()->SetRedraw(TRUE);
+			m_wndView.GetResultView()->RedrawWindow();
 			m_pDlgProgressing->DestroyWindow();
 			delete m_pDlgProgressing;
 			m_pDlgProgressing = NULL;
@@ -345,6 +349,9 @@ void CMainFrame::OnFileNew()
 
 void CMainFrame::OnFileLoad()
 {
+	CDlgLoad dlg;
+	if ( dlg.DoModal() != IDOK)
+		return;
 	// TODO: 在此添加命令处理程序代码
 }
 

@@ -15,6 +15,7 @@
 #define IDD_SKU_COMB_MGT                134
 #define IDD_INPUT_NAME                  135
 #define IDD_DIALOG1                     136
+#define IDD_FILE_LOAD                   136
 #define IDD_PROGRESSING                 137
 #define ID_START_QUERY                  1000
 #define IDC_COMBO1                      1003
@@ -42,6 +43,8 @@
 #define IDC_LIST_COMB                   1028
 #define IDC_PROGRESS1                   1029
 #define IDC_STATIC_PROGRESS             1030
+#define IDC_LIST1                       1031
+#define IDC_LIST_LOAD                   1031
 #define ID_EDIT_CONFIGURATION           32771
 #define ID_EDIT_SETTING                 32772
 #define ID_EDIT_OPTIONS                 32773
@@ -70,7 +73,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        138
 #define _APS_NEXT_COMMAND_VALUE         32793
-#define _APS_NEXT_CONTROL_VALUE         1031
+#define _APS_NEXT_CONTROL_VALUE         1032
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

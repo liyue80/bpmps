@@ -145,7 +145,7 @@ public: // TODO: change to protected functions
 		);
 
 	// 把日期转换成字符串，形如 2010-1-31
-	CString ConvertDateToString(const CTime &Date);
+	static CString ConvertDateToString(const CTime &Date);
 
 	// 对数组中的值求和
 	double SumOf(const CArray<double> &Array);
