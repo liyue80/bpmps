@@ -39,7 +39,20 @@ BOOL CDlgLoad::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// 初始化m_ListCtrl
+	InitializeListCtrl();
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+	// 异常: OCX 属性页应返回 FALSE
+}
+
+//
+// Called by CDlgLoad::OnInitDialog()
+//
+BOOL CDlgLoad::InitializeListCtrl(void)
+{
+	m_ListCtrl.SetExtendedStyle(
+		m_ListCtrl.GetExtendedStyle() | LVS_EX_FULLROWSELECT);
+
 	//设置列名
 	static const int COLUMN_NUM = 3;
 
@@ -51,34 +64,21 @@ BOOL CDlgLoad::OnInitDialog()
 
 	int ColumnWidth[] =
 	{
-		200, 200, 200
+		100, 100, 80
 	};
 	ASSERT( sizeof(ColumnWidth) == COLUMN_NUM * sizeof(int) );
 
-	char Buffer[128] = {0}; // Large than max length of ColumnText
-	
 	for ( int i = 0; i < COLUMN_NUM; i++ )
 	{
-		HDITEM Item = {0};
-		Item.mask = HDI_TEXT | HDI_WIDTH | HDI_FORMAT;
-		Item.fmt  = HDF_LEFT | HDF_STRING;
-		Item.cxy  = ColumnWidth[i];
-		strcpy_s(Buffer, ColumnText[i]);
-		Item.pszText = &Buffer[0];
-		Item.cchTextMax = strlen(Buffer);
-
-		int iRet = m_ListCtrl.GetHeaderCtrl()->InsertItem(i, &Item);
-		if ( -1 == iRet)
-		{
-			AfxMessageBox("Initialize column tree view failed");
-			break;
-		}
+		m_ListCtrl.InsertColumn(i, ColumnText[i]);
+		m_ListCtrl.SetColumnWidth(i, ColumnWidth[i]);
 	}
 
 	//添加m_ListCtrl中的数据
 	CMPSCore Core;
 	BOOL bRet = FALSE;
 	CArray<CString> SavedTableNames;
+
 	bRet = Core.ConnectDB("127.0.0.1", "root", "", "test", 0, NULL, 0);
 
 	if (bRet)
@@ -91,31 +91,19 @@ BOOL CDlgLoad::OnInitDialog()
 		CTime StartingDate, SaleWk1;
 		INT_PTR nCount = SavedTableNames.GetCount();
 		int ItemCount = 0;
+
 		for (INT_PTR i = 0; i < nCount; i++)
 		{
-			CString TableName = SavedTableNames.GetAt(i);
-			BOOL bRetLocal
-				= CMPSCore::DecodeTableName(TableName, StartingDate, SaleWk1);
-			ASSERT(bRetLocal == TRUE);
-			if (bRetLocal != TRUE)
-				continue;
-			CString ItemText = CMPSCore::ConvertDateToString(StartingDate);
-			CString SubItemText = CMPSCore::ConvertDateToString(SaleWk1);
-
-			LVITEM lvi = {0};
-			// Insert the item
-			lvi.mask = LVIF_TEXT;
-			lvi.iItem = i;
-			lvi.iSubItem = 0;
-			lvi.pszText = (LPTSTR)(LPCTSTR)(ItemText);
-			m_ListCtrl.InsertItem(&lvi);
-			// Set subitem 1
-			lvi.iSubItem = 1;
-			lvi.pszText = (LPTSTR)(LPCTSTR)(SubItemText);
-			m_ListCtrl.SetItem(&lvi);
+			if (CMPSCore::DecodeTableName(
+				SavedTableNames.GetAt(i), StartingDate, SaleWk1) != FALSE)
+			{
+				int iItem = m_ListCtrl.InsertItem(ItemCount,
+					CMPSCore::ConvertDateToString(StartingDate));
+				m_ListCtrl.SetItemText(iItem, 1,
+					CMPSCore::ConvertDateToString(SaleWk1));
+			}
 		}
 	}
 
-	return TRUE;  // return TRUE unless you set the focus to a control
-	// 异常: OCX 属性页应返回 FALSE
+	return bRet;
 }

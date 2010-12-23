@@ -22,4 +22,6 @@ protected:
 public:
 	CListCtrl m_ListCtrl;
 	virtual BOOL OnInitDialog();
+protected:
+	BOOL InitializeListCtrl(void);
 };
