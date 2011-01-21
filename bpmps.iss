@@ -28,6 +28,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "Release\Bpmps.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Release\libmysql.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dump.sql"; DestDir: "{app}"; Flags: ignoreversion
+Source: "init.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "mysql\*"; DestDir: "{app}\mysql"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
@@ -40,7 +41,8 @@ Name: "{commondesktop}\Anysoft Bpmps"; Filename: "{app}\Bpmps.exe"; Tasks: deskt
 Filename: "{app}\Bpmps.exe"; Description: "{cm:LaunchProgram,Anysoft Bpmps}"; Flags: nowait postinstall skipifsilent
 Filename: "{app}\mysql\bin\mysqld.exe"; Parameters: "--install AnysoftMySQL --defaults-file=""{app}\mysql\my.ini"""; Description: "Install MySQL service"; StatusMsg: "Installing service..."
 Filename: "net"; Parameters: "start AnysoftMySQL"
-Filename: "{app}\mysql\bin\mysql.exe"; Parameters: "-u root -h localhost test < dump.sql"
+;Filename: "{app}\mysql\bin\mysql.exe"; Parameters: "-u root -h localhost test < {app}\dump.sql >> c:\debug.txt"
+Filename: "{app}\init.bat"
 [UninstallRun]
 Filename: "net"; Parameters: "stop AnysoftMySQL"
 Filename: "sc"; Parameters: "delete AnysoftMySQL"
